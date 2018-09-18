@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Heatmaps</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+    integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+    crossorigin="anonymous"></script>
+
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDUyEcwD529GISBSiRfgDs1gslJ1u829Hw&libraries=visualization&callback=initMap">
+    </script>
+    <script>
+
+        // Scaling
+        // PLACE        LAT        LONG       X    Y
+        // Nauders      46.891674  10.501469  87   276
+        // Zistersdorf  48.541407  16.759886  640  61
+
+        // X -> LONG (m=0.011317, c=9.516872)
+        // Y -> LAT (m=-0.00767, c=49.00947) 
+
+      var map, heatmap;
+
+    function initMap() {
+        var items = {};
+        $.getJSON( "http://sfws.lfrz.at/json.php",{command: "getstations"}).done(function(data){
+            $.each( data, function( key, val ) {
+                items[key] = {
+                    "n": val.n,
+                    "x": val.x,
+                    "y": val.y,
+                    "lat":((-0.00767*val.y)+49.00947),
+                    "lng":((0.011317*val.x)+9.516872),
+                    "val":0.0
+                };
+            });
+            $.getJSON( "http://sfws.lfrz.at/json.php",{command: "getdata"}).done(function(data){
+                $.each( data.values, function( key, val ) {
+                    items[key].val = val.v;
+                });
+                set_heatmap(items);
+            });
+        });
+
+        function set_heatmap(items){
+            var heatMapData = [];
+            $.each(items, function(k,v){
+                heatMapData.push({location: new google.maps.LatLng(v.lat, v.lng), weight: v.val});
+            });
+
+            var austria = new google.maps.LatLng(47.347853, 13.310719);
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: austria,
+                zoom: 7
+            });
+
+            var heatmap = new google.maps.visualization.HeatmapLayer({
+                data: heatMapData,
+                radius: 60
+            });
+            heatmap.setMap(map);
+        }
+    };
+    </script>
+  </body>
+</html>
