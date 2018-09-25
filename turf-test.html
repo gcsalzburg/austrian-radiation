@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title>turf-polygon</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+crossorigin="anonymous"></script>
+<script src='js/turf.min.js'></script>
+<script src='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.css' rel='stylesheet' />
+<style>
+  body { margin:0; padding:0; }
+  #map { position:absolute; top:0; bottom:0; width:100%; }
+</style>
+</head>
+<body>
+<div id='map'></div>
+
+<script>
+L.mapbox.accessToken = 'pk.eyJ1IjoiZ2NzYWx6YnVyZyIsImEiOiJjam1pNm5uZmcwMXNyM3FtNGp6dTY3MGxsIn0.PmLPkI3T8UxjEIPnz7fxEA';
+
+var map = L.mapbox.map('map', 'jvrousseau.h4h90e5o').setView([40, 0], 4);
+
+initMap();
+
+function initMap() {
+    var items = {};
+    $.getJSON( "http://sfws.lfrz.at/json.php",{command: "getstations"}).done(function(data){
+        $.each( data, function( key, val ) {
+            items[key] = {
+                "n": val.n,
+                "x": val.x,
+                "y": val.y,
+                "lat":((-0.00767*val.y)+49.00947),
+                "lng":((0.011317*val.x)+9.516872),
+                "val":0.0
+            };
+        });
+        $.getJSON( "http://sfws.lfrz.at/json.php",{command: "getdata"}).done(function(data){
+            $.each( data.values, function( key, val ) {
+                items[key].val = val.v;
+            });
+            set_heatmap(items);
+        });
+    });
+
+    function set_heatmap(items){
+
+        var heatMapData = [];
+
+        $.each(items, function(k,v){
+            var loc = turf.point([v.lng, v.lat], {temperature: (Math.random() * 10)});
+            heatMapData.push(loc);
+        });
+    //  var locationA = turf.point([-75.343, 39.984], {name: 'Location A'});
+
+        var collection = turf.featureCollection(heatMapData);
+        console.log(collection);
+
+        collection.features.forEach(function(feat) {
+            var lat = feat.geometry.coordinates[1];
+            var lng = feat.geometry.coordinates[0];
+            L.circle([lat,lng], feat.properties.temperature*50).addTo(map);
+        });
+
+        var breaks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+        var lines = turf.isolines(collection, breaks, {zProperty: 'temperature'});
+
+        console.log(lines);
+        L.geoJson(lines, {color:"red"}).addTo(map);
+
+
+        }
+    };
+
+
+
+// create a grid of points with random z-values in their properties
+var extent = [0, 20, 20, 50];
+var cellWidth = 100;
+var pointGrid = turf.pointGrid(extent, cellWidth, {units: 'miles'});
+for (var i = 0; i < pointGrid.features.length; i++) {
+    pointGrid.features[i].properties.temperature = Math.random() * 10;
+}
+console.log(pointGrid);
+
+
+pointGrid.features.forEach(function(feat) {
+  var lat = feat.geometry.coordinates[1];
+  var lng = feat.geometry.coordinates[0];
+  L.circle([lat,lng], feat.properties.temperature*5000).addTo(map);
+});
+
+var breaks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+var lines = turf.isolines(pointGrid, breaks, {zProperty: 'temperature'});
+L.geoJson(lines, {color:"red"}).addTo(map);
+
+</script>
+</body>
+</html>
