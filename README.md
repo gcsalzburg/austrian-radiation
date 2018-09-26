@@ -18,3 +18,9 @@ More Turf related linkes:
 - https://www.mapbox.com/mapbox.js/api/v3.1.1/l-mapbox-tilelayer/
 - https://github.com/RaumZeit/MarchingSquares.js
 - http://turfjs.org/docs/#pointGrid
+
+Voroni polygons:
+
+- https://leafletjs.com/examples/choropleth/
+- https://www.mapbox.com/mapbox.js/api/v3.1.1/l-map-class/
+- https://leafletjs.com/examples/geojson/
