@@ -10,6 +10,7 @@ crossorigin="anonymous"></script>
 <script src='js/turf.min.js'></script>
 <script src='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.js'></script>
 <link href='https://api.tiles.mapbox.com/mapbox.js/v2.0.1/mapbox.css' rel='stylesheet' />
+
 <style>
   body { margin:0; padding:0; }
   #map { position:absolute; top:0; bottom:0; width:100%; }
@@ -21,7 +22,7 @@ crossorigin="anonymous"></script>
 <script>
 L.mapbox.accessToken = 'pk.eyJ1IjoiZ2NzYWx6YnVyZyIsImEiOiJjam1pNm5uZmcwMXNyM3FtNGp6dTY3MGxsIn0.PmLPkI3T8UxjEIPnz7fxEA';
 
-var map = L.mapbox.map('map', 'jvrousseau.h4h90e5o').setView([40, 0], 4);
+var map = L.mapbox.map('map', 'jvrousseau.h4h90e5o').setView([47.414591, 13.388446], 7);
 
 initMap();
 
@@ -33,7 +34,7 @@ function initMap() {
                 "n": val.n,
                 "x": val.x,
                 "y": val.y,
-                "lat":((-0.00767*val.y)+49.00947),
+                "lat":((-0.00767*val.y)+49.00947),  // Magic numbers!
                 "lng":((0.011317*val.x)+9.516872),
                 "val":0.0
             };
@@ -51,54 +52,42 @@ function initMap() {
         var heatMapData = [];
 
         $.each(items, function(k,v){
-            var loc = turf.point([v.lng, v.lat], {temperature: (Math.random() * 10)});
+            var loc = turf.point([v.lng, v.lat], {radiation: v.val});
             heatMapData.push(loc);
         });
-    //  var locationA = turf.point([-75.343, 39.984], {name: 'Location A'});
 
         var collection = turf.featureCollection(heatMapData);
-        console.log(collection);
-
         collection.features.forEach(function(feat) {
             var lat = feat.geometry.coordinates[1];
             var lng = feat.geometry.coordinates[0];
-            L.circle([lat,lng], feat.properties.temperature*50).addTo(map);
+            L.circle([lat,lng], feat.properties.radiation*100, {stroke: false, fillOpacity: 0.7, color: '#0000ff'}).addTo(map);
         });
 
-        var breaks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        var geojsonMarkerOptions = {
+            radius: 4,
+            fillColor: "#000",
+            color: "#000",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+        };
 
-        var lines = turf.isolines(collection, breaks, {zProperty: 'temperature'});
+        L.geoJson(collection, {
+            pointToLayer: function (feature, latlng) {
+                return L.circleMarker(latlng, geojsonMarkerOptions);
+            }
+        }).addTo(map);
 
-        console.log(lines);
-        L.geoJson(lines, {color:"red"}).addTo(map);
-
-
+        var voronoiPolygons = turf.voronoi(collection);
+        L.geoJson(voronoiPolygons,{
+            style: function(feature){
+                var opts = {fillOpacity:0, weight:2, color:'#ff0000'};
+                return opts;
+                }
+            }).addTo(map);
+        console.log(voronoiPolygons);
         }
     };
-
-
-
-// create a grid of points with random z-values in their properties
-var extent = [0, 20, 20, 50];
-var cellWidth = 100;
-var pointGrid = turf.pointGrid(extent, cellWidth, {units: 'miles'});
-for (var i = 0; i < pointGrid.features.length; i++) {
-    pointGrid.features[i].properties.temperature = Math.random() * 10;
-}
-console.log(pointGrid);
-
-
-pointGrid.features.forEach(function(feat) {
-  var lat = feat.geometry.coordinates[1];
-  var lng = feat.geometry.coordinates[0];
-  L.circle([lat,lng], feat.properties.temperature*5000).addTo(map);
-});
-
-var breaks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-
-var lines = turf.isolines(pointGrid, breaks, {zProperty: 'temperature'});
-L.geoJson(lines, {color:"red"}).addTo(map);
-
 </script>
 </body>
 </html>
