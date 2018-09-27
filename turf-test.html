@@ -27,7 +27,12 @@ var map = L.mapbox.map('map', 'jvrousseau.h4h90e5o').setView([47.414591, 13.3884
 initMap();
 
 function initMap() {
+
+    var min_Rad = 100000000;
+    var max_Rad = 0;
+
     var items = {};
+
     $.getJSON( "http://sfws.lfrz.at/json.php",{command: "getstations"}).done(function(data){
         $.each( data, function( key, val ) {
             items[key] = {
@@ -42,12 +47,25 @@ function initMap() {
         $.getJSON( "http://sfws.lfrz.at/json.php",{command: "getdata"}).done(function(data){
             $.each( data.values, function( key, val ) {
                 items[key].val = val.v;
+                if(val.v > max_Rad){
+                    max_Rad = val.v;
+                }
+                if(val.v < min_Rad){
+                    min_Rad = val.v;
+                }
             });
+            console.log({min_Rad,max_Rad});
             set_heatmap(items);
         });
     });
 
+
     function set_heatmap(items){
+
+
+
+        var austria_poly = '{"type": "Feature", "properties":{}, "geometry": {"type":"Polygon","coordinates":[[[16.9796505,48.123500820000004],[16.90376091,47.71487045000002],[16.34057999,47.71289824999999],[16.53426933,47.49615860000001],[16.20228004,46.85237885000001],[16.01166916,46.68360137999999],[15.1370697,46.65869903999997],[14.63249016,46.431819920000024],[13.80648041,46.50928879000001],[12.376500130000002,46.76755905000001],[12.15307999,47.11539077999998],[11.16483974,46.941589359999995],[11.04856014,46.75135040000001],[10.44270992,46.89355087000002],[9.932479859999999,46.920730589999984],[9.47998047,47.10282135],[9.6329298,47.34759139999999],[9.59424019,47.52507019000002],[9.89606953,47.58021164000003],[10.40207005,47.302471160000024],[10.54448986,47.56639099],[11.42644024,47.523780820000006],[12.14136028,47.70307159000001],[12.62077045,47.672389980000005],[12.932640079999999,47.46762848000001],[13.02585983,47.63758086999999],[12.88411045,48.289161680000014],[13.24333,48.41609955000003],[13.59593964,48.87717056],[14.33887959,48.555301670000006],[14.901439669999998,48.96438979999999],[15.25341034,49.03908157000001],[16.02964973,48.73389815999998],[16.4993,48.78580855999999],[16.96030045,48.596969599999994],[16.87999916,48.47000122],[16.9796505,48.123500820000004]]]}}';
+        L.geoJson(JSON.parse(austria_poly),{fillOpacity:0.5, weight:2, color:'#ffffff'}).addTo(map);
 
         var heatMapData = [];
 
@@ -78,16 +96,55 @@ function initMap() {
             }
         }).addTo(map);
 
-        var voronoiPolygons = turf.voronoi(collection);
+    /*    var voronoiPolygons = turf.voronoi(collection);
         L.geoJson(voronoiPolygons,{
             style: function(feature){
                 var opts = {fillOpacity:0, weight:2, color:'#ff0000'};
                 return opts;
-                }
-            }).addTo(map);
-        console.log(voronoiPolygons);
+            }
+        }).addTo(map);*/
+
+        var tin = turf.tin(collection, 'radiation');
+        L.geoJson(tin,{
+            style: function(feature){
+
+                var perc = (feature.properties.a+feature.properties.b+feature.properties.c)/3;
+                perc = (perc-min_Rad)*100/(max_Rad-min_Rad);
+                var opts = {
+                    fillOpacity:    0.5,
+                    weight:         1,
+                    color:          '#000000',
+                    fillColor:      perc2color(perc)
+                };
+                var old_perc = (feature.properties.a+feature.properties.b+feature.properties.c)/3;
+                console.log({old_perc,perc});
+                return opts;
+            }
+        }).addTo(map);
+        console.log(tin);
+
+        var grid_extent = [46.705090, 9.266321, 49.258919, 17.469323];
+        var cellSide = 50;
+        var options = {units: 'kilometres'};
+        var grid = turf.pointGrid(extent, cellSide, options);
+
         }
     };
+
+
+function perc2color(perc) {
+	var r, g, b = 0;
+	if(perc < 50) {
+		r = 255;
+		g = Math.round(5.1 * perc);
+	}
+	else {
+		g = 255;
+		r = Math.round(510 - 5.10 * perc);
+	}
+	var h = r * 0x10000 + g * 0x100 + b * 0x1;
+	return '#' + ('000000' + h.toString(16)).slice(-6);
+}
 </script>
 </body>
 </html>
