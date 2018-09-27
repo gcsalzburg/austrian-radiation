@@ -74,6 +74,12 @@ function initMap() {
         var show_tin_polygons   = false;
         var show_grid_points    = true;
 
+        // Options are:
+        // 'nearest-vertex' 
+        // 'vertex-average'
+        // 'interpolate'
+        var calc_method = 'interpolate';
+
         // Add outline of Austria to map
         if(show_austria){
             L.geoJson(austria_poly,{fillOpacity:0.5, weight:2, color:'#ffffff'}).addTo(map);
@@ -88,6 +94,14 @@ function initMap() {
 
         // Create featureCollection of unstructured data points
         var rawDataPoints = turf.featureCollection(rawDataArray);
+
+        // Add unique identifier to each point (used later on to get them from the TIN coords)
+        var index = 0;
+        rawDataPoints.features.forEach(function(feat) {
+            feat.properties.ref = index;
+            index++;
+        });
+
 
         // Add unstructured data points to map
         if(show_raw_points){
@@ -125,11 +139,22 @@ function initMap() {
         // }).addTo(map);
      
         // Create TIN polygons
-        var tin_polys = turf.tin(rawDataPoints, 'radiation');
+        var tin_polys = turf.tin(rawDataPoints, 'ref');
         L.geoJson(tin_polys,{
             onEachFeature: function (feature, layer) {
-                feature.properties.rad_av = (feature.properties.a+feature.properties.b+feature.properties.c)/3;
-                feature.properties.fillColor = perc2color(rad2perc((feature.properties.a+feature.properties.b+feature.properties.c)/3));
+                var radiation_sum = 0;
+                rawDataPoints.features.forEach(function(feat) {
+                    if(feat.properties.ref == feature.properties.a){
+                        radiation_sum += feature.properties.radiation;
+                    }
+                    if(feat.properties.ref == feature.properties.b){
+                        radiation_sum += feature.properties.radiation;
+                    }
+                    if(feat.properties.ref == feature.properties.c){
+                        radiation_sum += feature.properties.radiation;
+                    }
+                });
+                feature.properties.radiation = (feature.properties.a+feature.properties.b+feature.properties.c)/3;
         }});
 
         // Add TIN polygons to the map
@@ -140,7 +165,7 @@ function initMap() {
                         fillOpacity:    0.5,
                         weight:         1,
                         color:          '#000000',
-                        fillColor:      feature.properties.fillColor
+                        fillColor:      perc2color(rad2perc(feature.properties.radiation))
                     };
                     return opts;
                 }
@@ -149,23 +174,90 @@ function initMap() {
 
         // Build the structured overlay grid
         var grid_extent = [9.25, 46.25, 17.45, 49.1];
-        var cellSide = 30;
+        var cellSide = 5;
         var options = {units: 'kilometres'};
         var grid = turf.pointGrid(grid_extent, cellSide, options);
 
         // Trim structured grid to points within the Austria polygon only
         var ptsWithin = turf.pointsWithinPolygon(grid, austria_poly);
 
-        // Calculate which TIN polygon each point lies within
-        L.geoJson(ptsWithin, {
-            onEachFeature: function (feature, layer) {
-                tin_polys.features.forEach(function(tin_feat) {
-                    if(turf.booleanPointInPolygon(feature,tin_feat)){
-                        feature.properties.fillColor = tin_feat.properties.fillColor;
-                        return false; // break out of forEach to save computation cycles
+        // Choose which method to calculate the radiation value for the points by
+        switch(calc_method){
+
+            // Method A: Calculate which TIN polygon each point lies within
+            case 'vertex-average':
+                L.geoJson(ptsWithin, {
+                    onEachFeature: function (feature, layer) {
+                        tin_polys.features.forEach(function(tin_feat) {
+                            if(turf.booleanPointInPolygon(feature,tin_feat)){
+                                feature.properties.radiation = tin_feat.properties.radiation;
+                                return false; // break out of forEach to save computation cycles
+                            }
+                        });
                     }
                 });
-        }});
+                break;
+
+            // Method B: Calculate which unstructured data point each point is nearest to    
+            case 'nearest-vertex': 
+                L.geoJson(ptsWithin, {
+                    onEachFeature: function (feature, layer) {
+                        var near_point = turf.nearestPoint(feature,rawDataPoints);
+                        feature.properties.radiation = near_point.properties.radiation;
+                    }
+                });        
+                break; 
+
+            // Method C: Calculate a weighted average to the three corners
+            case 'interpolate': 
+                L.geoJson(ptsWithin, {
+                    onEachFeature: function (feature, layer) {
+
+                        // 1: Get which polygon we are inside
+                        tin_polys.features.forEach(function(tin_feat) {
+                            if(turf.booleanPointInPolygon(feature,tin_feat)){
+
+                                // 2: Get the points on the corner of this polygon
+                                var nearest_points = [];
+                                rawDataPoints.features.forEach(function(feat) {
+                                    if(feat.properties.ref == tin_feat.properties.a){
+                                        nearest_points.push(feat);
+                                    }
+                                    if(feat.properties.ref == tin_feat.properties.b){
+                                        nearest_points.push(feat);
+                                    }
+                                    if(feat.properties.ref == tin_feat.properties.c){
+                                        nearest_points.push(feat);
+                                    }
+                                });
+
+                                // 3: Calculate an interpolation between these points
+                                var distances = [
+                                    turf.distance(feature,nearest_points[0]),
+                                    turf.distance(feature,nearest_points[1]),
+                                    turf.distance(feature,nearest_points[2])
+                                ];
+                                var dist_sum = distances[0]+distances[1]+distances[2];
+                                var radiations = [
+                                    nearest_points[0].properties.radiation,
+                                    nearest_points[1].properties.radiation,
+                                    nearest_points[2].properties.radiation
+                                ];
+
+                                var this_radiation = ((dist_sum-distances[0])/dist_sum)*radiations[0];
+                                this_radiation += ((dist_sum-distances[1])/dist_sum)*radiations[1];
+                                this_radiation += ((dist_sum-distances[2])/dist_sum)*radiations[2];
+
+                                feature.properties.radiation = this_radiation/2;
+
+                                return false; // break out of forEach to save computation cycles
+                            }
+                        });
+                    }
+                });
+
+                break;           
+        }
 
         // Add structured grid points to map
         if(show_grid_points){
@@ -179,9 +271,9 @@ function initMap() {
                         stroke: false,
 
                         // Fill properties
-                        fillColor: feature.properties.fillColor,
+                        fillColor: perc2color(rad2perc(feature.properties.radiation)),
                         fillOpacity: 1,
-                        radius: 6
+                        radius: 3
                     });
                 }
             }).addTo(map);
