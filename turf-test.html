@@ -68,10 +68,16 @@ function initMap() {
     function build_heatmap(items){
 
         // Visibility flags
-        var show_raw_points =    true;
+        var show_austria        = true;
+        var show_raw_points     = false;
+        var show_raw_centres    = false;
+        var show_tin_polygons   = false;
+        var show_grid_points    = true;
 
-        // Draw the outline of Austria
-        L.geoJson(austria_poly,{fillOpacity:0.5, weight:2, color:'#ffffff'}).addTo(map);
+        // Add outline of Austria to map
+        if(show_austria){
+            L.geoJson(austria_poly,{fillOpacity:0.5, weight:2, color:'#ffffff'}).addTo(map);
+        }
 
         // Create an array of points from the heatmap data values (TODO : move this into $.getJSON above in future)
         var rawDataArray = [];
@@ -82,25 +88,31 @@ function initMap() {
 
         // Create featureCollection of unstructured data points
         var rawDataPoints = turf.featureCollection(rawDataArray);
-        rawDataPoints.features.forEach(function(feat) {
-            var lat = feat.geometry.coordinates[1];
-            var lng = feat.geometry.coordinates[0];
-            L.circle([lat,lng], feat.properties.radiation*100, {stroke: false, fillOpacity: 0.7, color: '#0000ff'}).addTo(map);
-        });
 
-        // Add unstructured points to map
-        L.geoJson(rawDataPoints, {
-            pointToLayer: function (feature, latlng) {
-                return L.circleMarker(latlng, {
-                    radius: 4,
-                    fillColor: "#000",
-                    color: "#000",
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                });
-            }
-        }).addTo(map);
+        // Add unstructured data points to map
+        if(show_raw_points){
+            rawDataPoints.features.forEach(function(feat) {
+                var lat = feat.geometry.coordinates[1];
+                var lng = feat.geometry.coordinates[0];
+                L.circle([lat,lng], feat.properties.radiation*100, {stroke: false, fillOpacity: 0.7, color: '#0000ff'}).addTo(map);
+            });
+        }
+
+        // Add centre points for unstructured data points to map
+        if(show_raw_centres){
+            L.geoJson(rawDataPoints, {
+                pointToLayer: function (feature, latlng) {
+                    return L.circleMarker(latlng, {
+                        radius: 4,
+                        fillColor: "#000",
+                        color: "#000",
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+                }
+            }).addTo(map);
+        }
 
         // Create voronoi polygons around the data points
         // This step is not needed, here for historical reasons only
@@ -121,17 +133,19 @@ function initMap() {
         }});
 
         // Add TIN polygons to the map
-        L.geoJson(tin_polys,{
-            style: function(feature){
-                var opts = {
-                    fillOpacity:    0.5,
-                    weight:         1,
-                    color:          '#000000',
-                    fillColor:      feature.properties.fillColor
-                };
-                return opts;
-            }
-        }).addTo(map);
+        if(show_tin_polygons){
+            L.geoJson(tin_polys,{
+                style: function(feature){
+                    var opts = {
+                        fillOpacity:    0.5,
+                        weight:         1,
+                        color:          '#000000',
+                        fillColor:      feature.properties.fillColor
+                    };
+                    return opts;
+                }
+            }).addTo(map);
+        }
 
         // Build the structured overlay grid
         var grid_extent = [9.25, 46.25, 17.45, 49.1];
@@ -154,22 +168,24 @@ function initMap() {
         }});
 
         // Add structured grid points to map
-        L.geoJson(ptsWithin, {
-            pointToLayer: function (feature, latlng) {
-                return L.circleMarker(latlng, {
-                    // Stroke properties
-                    color: '#000',
-                    opacity: 0.75,
-                    weight: 2,
-                    stroke: false,
+        if(show_grid_points){
+            L.geoJson(ptsWithin, {
+                pointToLayer: function (feature, latlng) {
+                    return L.circleMarker(latlng, {
+                        // Stroke properties
+                        color: '#000',
+                        opacity: 0.75,
+                        weight: 2,
+                        stroke: false,
 
-                    // Fill properties
-                    fillColor: feature.properties.fillColor,
-                    fillOpacity: 1,
-                    radius: 6
-                });
-            }
-        }).addTo(map);
+                        // Fill properties
+                        fillColor: feature.properties.fillColor,
+                        fillOpacity: 1,
+                        radius: 6
+                    });
+                }
+            }).addTo(map);
+        }
     }
 
     // Scales a radiation value between the maximum and minimum possible values
