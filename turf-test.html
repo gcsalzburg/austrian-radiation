@@ -38,6 +38,7 @@ function initMap() {
 
     var items = {};
 
+    // Get JSON list of places
     $.getJSON( "http://sfws.lfrz.at/json.php",{command: "getstations"}).done(function(data){
         $.each( data, function( key, val ) {
             items[key] = {
@@ -62,6 +63,7 @@ function initMap() {
             console.log({min_Rad,max_Rad});
             build_heatmap(items);
         });
+        
     });
 
 
