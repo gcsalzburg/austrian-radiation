@@ -19,7 +19,7 @@ The transformation process for the data was as follows:
 
 1. Read in JSON data from source API
 2. Transform data (pixels to co-ordinates) and save into GeoJSON array
-3. Create TIN polygons from unstructured data set
+3. Create TIN polygons from unstructured data set (if needed)
 4. Overlay a structured grid across target area
 5. Calculate radiation level at each structured grid point using one of various methods (vertex averaging, nearest neighbour or interpolation). Deal with points on grid outside of Austria.
 6. Calculate isobands using Marching Squares algorithm across structured grid
@@ -38,9 +38,9 @@ Some useful resources from the production of this experiment:
 - Comparison of isoband algorithms http://emptypipes.org/2015/07/22/contour-comparison/
 - Marching Squares implementation (not used in the end in favour of the Turf.js native implementation) https://github.com/RaumZeit/MarchingSquares.js
 - Comparison of different intersect function speeds https://polygon-clipping.js.org/
+- Useful GeoJSON/Turf examples https://joeyklee.github.io/geosandbox/hello-turf.html
 
 ### Q&A support info ###
-
 
 - Summary of interpolation of scattered data using Matlab (used as a basis for how to construct this algorithm) https://www.mathworks.com/help/matlab/math/interpolating-scattered-data.html
 - How to add different styles and events to items in a FeatureCollection https://leafletjs.com/examples/choropleth/
