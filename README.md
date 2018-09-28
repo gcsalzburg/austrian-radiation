@@ -19,9 +19,11 @@ The transformation process for the data was as follows:
 
 1. Read in JSON data from source API
 2. Transform data (pixels to co-ordinates) and save into GeoJSON array
-3. Create TIN polygons from unstructured data set (if needed)
-4. Overlay a structured grid across target area
-5. Calculate radiation level at each structured grid point using one of various methods (vertex averaging, nearest neighbour or interpolation). Deal with points on grid outside of Austria.
+5. Calculate radiation level at each structured grid point across target area using one of various methods:
+   1. Nearest neighbour (iteration over unstructured grid)
+   2. Vertex averaging (create TIN polygons and average corner points)
+   3. Interpolation (using turf/interpolate)
+4. Deal with points on grid outside of Austria.
 6. Calculate isobands using Marching Squares algorithm across structured grid
 7. Crop isobands to outline of Austria
 8. Display data
