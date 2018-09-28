@@ -1,3 +1,16 @@
+# Austrian Radiation #
+
+The following notes are a skeleton of a longer description of how this was formed.
+
+This project makes use of:
+
+- [http://sfws.lfrz.at/](Open API for radiation meters across Austria)
+
+## Su
+
+
+
+
 Links:
 
 - http://sfws.lfrz.at/
