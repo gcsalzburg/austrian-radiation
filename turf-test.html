@@ -31,7 +31,7 @@ function initMap() {
 
     // Variables
     var increments = 5;    // Number of sV in each isoband
-    var cellSide = 5;      // Distance between grid points, smaller = slower (km)
+    var cellSide = 10;      // Distance between grid points, smaller = slower (km)
 
     
     // Outline of Austria
@@ -85,16 +85,17 @@ function initMap() {
         // Visibility flags
         var show_austria        = false;
         var show_raw_points     = false;
-        var show_raw_centres    = false;
+        var show_raw_centres    = true;
         var show_tin_polygons   = false;
-        var show_grid_points    = false;
-        var show_isobands       = true;
+        var show_grid_points    = true;
+        var show_isobands       = false;
 
         // Options are:
         // 'nearest-vertex' 
         // 'vertex-average'
         // 'interpolate'
-        var calc_method = 'nearest-vertex';
+        // 'interpolate-native'
+        var calc_method = 'interpolate-native';
 
         // Add outline of Austria to map
         if(show_austria){
@@ -272,7 +273,17 @@ function initMap() {
                     }
                 });
 
-                break;           
+                break;   
+            case 'interpolate-native': 
+
+                var ptsWithin = turf.interpolate(rawDataPoints, cellSide, {
+                    gridType: 'points',
+                    property: 'radiation',
+                    units: 'kilometres',
+                    weight: 10
+                })
+            
+                break;
         }
 
         // Add structured grid points to map
