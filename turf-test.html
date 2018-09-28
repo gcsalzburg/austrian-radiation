@@ -288,6 +288,9 @@ function initMap() {
     // Return a hex colour from red -> yellow -> green depending upon input percentage (0 -> 100)
     function perc2color(perc) {
         var r, g, b = 0;
+
+        perc = 100-perc; // invert so green = low number
+
         if(perc < 50) {
             r = 255;
             g = Math.round(5.1 * perc);
