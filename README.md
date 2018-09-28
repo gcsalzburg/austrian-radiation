@@ -9,11 +9,11 @@ This project makes use of:
 - [Turf.js](http://turfjs.org/docs/)
 - [Martinez polygon clipping](https://github.com/w8r/martinez)
 
-## Summary
+## Summary ##
 
 The idea was to provide a "rainfall weather-map" style display of radiation levels across Austria. 
 
-The key challenges were to convert a set of arbitary data points from an API into a set of isobands. This involves converting unstructured points into a structured grid, a challenge for which Turf (and most other JS libraries) do not provide a native library. Isoband algorithms such as Marching Squares will only work on a gridded, structured data set.
+The key challenges were to convert a set of arbitary data points from an API into a set of isobands. This involves converting unstructured points into a structured grid, a challenge for which Turf (and most other JS libraries) do not provide a native library. This is not an [uncommon challenge](https://gis.stackexchange.com/questions/76357/rendering-temperature-on-google-maps)! Isoband algorithms such as Marching Squares will only work on a gridded, structured data set. The GeoJSON format was used throughout. 
 
 The transformation process for the data was as follows:
 
@@ -30,37 +30,24 @@ The transformation process for the data was as follows:
 
 Some useful resources from the production of this experiment:
 
-### Resources ###
+### Resources & docs ###
 
 - http://sfws.lfrz.at/json.php
+- https://github.com/Turfjs/turf
+- https://leafletjs.com/examples/geojson/
+- Comparison of isoband algorithms http://emptypipes.org/2015/07/22/contour-comparison/
+- Marching Squares implementation (not used in the end in favour of the Turf.js native implementation) https://github.com/RaumZeit/MarchingSquares.js
+- Comparison of different intersect function speeds https://polygon-clipping.js.org/
 
 ### Q&A support info ###
 
+
 - Summary of interpolation of scattered data using Matlab (used as a basis for how to construct this algorithm) https://www.mathworks.com/help/matlab/math/interpolating-scattered-data.html
+- How to add different styles and events to items in a FeatureCollection https://leafletjs.com/examples/choropleth/
 
+## Other useful notes ##
 
+Turf.js docs can be usefully supplemented with notes on each individual package page.
 
-Links:
+Turf intersect did not work reliably on MultiPolygons, hence Martinez was used. Another option would have been to [iterate over and split the shape into multiple Polygons](https://gis.stackexchange.com/questions/121396/convert-multipolygon-geojson-to-multiple-geojson-polygons) but this didn't seem very efficient!
 
-
-- https://gis.stackexchange.com/questions/76519/render-data-on-top-of-google-maps
-- https://leafletjs.com/examples/choropleth/
-- https://www.sitepoint.com/javascript-geospatial-advanced-maps/
-- http://turfjs.org/docs#isobands
-
-- https://gis.stackexchange.com/questions/76357/rendering-temperature-on-google-maps
-
-More Turf related linkes:
-
-- http://emptypipes.org/2015/07/22/contour-comparison/
-- https://github.com/Turfjs/turf/issues/829
-- https://joeyklee.github.io/geosandbox/hello-turf.html#section3
-- https://www.mapbox.com/mapbox.js/api/v3.1.1/l-mapbox-tilelayer/
-- https://github.com/RaumZeit/MarchingSquares.js
-- http://turfjs.org/docs/#pointGrid
-
-Voroni polygons:
-
-- https://leafletjs.com/examples/choropleth/
-- https://www.mapbox.com/mapbox.js/api/v3.1.1/l-map-class/
-- https://leafletjs.com/examples/geojson/
