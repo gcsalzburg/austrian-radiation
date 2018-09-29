@@ -161,12 +161,12 @@ function initMap() {
                 var grid = turf.pointGrid(grid_extent, grid_size, {units: 'kilometres'});
 
                 // Calculate which tin poly each point is inside
+                // TODO: Change from forEach to different loop format to enable break out after test passes
                 grid.features.forEach(function(f) {
                     f.properties.radiation = 0;
                     tin_polys.features.forEach(function(tin_feat) {
                         if(turf.booleanPointInPolygon(f,tin_feat)){
                             f.properties.radiation = tin_feat.properties.radiation;
-                            return false; // break out of forEach to save computation cycles
                         }
                     });
                 });
