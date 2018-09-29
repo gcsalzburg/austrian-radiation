@@ -30,9 +30,9 @@ initMap();
 function initMap() {
 
     // Variables
-    var increments = 5;    // Number of sV in each isoband
-    var cellSide = 10;      // Distance between grid points, smaller = slower (km)
-
+    var increments = 5;                             // Number of sV in each isoband
+    var grid_size = 10;                             // Distance between grid points, smaller = slower (km)
+    var grid_extent = [9.25, 46.25, 17.45, 49.1];   // Size of grid to produce
     
     // Outline of Austria
 
@@ -85,17 +85,15 @@ function initMap() {
         // Visibility flags
         var show_austria        = false;
         var show_raw_points     = false;
-        var show_raw_centres    = true;
         var show_tin_polygons   = false;
-        var show_grid_points    = true;
-        var show_isobands       = false;
+        var show_grid_points    = false;
+        var show_isobands       = true;
 
         // Options are:
         // 'nearest-vertex' 
         // 'vertex-average'
-        // 'interpolate'
-        // 'interpolate-native'
-        var calc_method = 'interpolate-native';
+        // 'interpolate''
+        var calc_method = 'interpolate';
 
         // Add outline of Austria to map
         if(show_austria){
@@ -112,13 +110,12 @@ function initMap() {
         // Create featureCollection of unstructured data points
         var rawDataPoints = turf.featureCollection(rawDataArray);
 
-        // Add unique identifier to each point (used later on to get them from the TIN coords)
+        // Add unique identifier to each point (e.g. to be used in back reference from TIN coords)
         var index = 0;
         rawDataPoints.features.forEach(function(feat) {
             feat.properties.ref = index;
             index++;
         });
-
 
         // Add unstructured data points to map
         if(show_raw_points){
@@ -129,72 +126,65 @@ function initMap() {
             });
         }
 
-        // Add centre points for unstructured data points to map
-        if(show_raw_centres){
-            L.geoJson(rawDataPoints, {
-                pointToLayer: function (feature, latlng) {
-                    return L.circleMarker(latlng, {
-                        radius: 4,
-                        fillColor: "#000",
-                        color: "#000",
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    });
-                }
-            }).addTo(map);
-        }
-     
-        // Create TIN polygons
-        var tin_polys = turf.tin(rawDataPoints, 'ref');
-        L.geoJson(tin_polys,{
-            onEachFeature: function (feature, layer) {
-                var radiation_sum = 0;
-                rawDataPoints.features.forEach(function(feat) {
-                    if(feat.properties.ref == feature.properties.a){
-                        radiation_sum += feature.properties.radiation;
-                    }
-                    if(feat.properties.ref == feature.properties.b){
-                        radiation_sum += feature.properties.radiation;
-                    }
-                    if(feat.properties.ref == feature.properties.c){
-                        radiation_sum += feature.properties.radiation;
-                    }
-                });
-                feature.properties.radiation = (feature.properties.a+feature.properties.b+feature.properties.c)/3;
-        }});
-
-        // Add TIN polygons to the map
-        if(show_tin_polygons){
-            L.geoJson(tin_polys,{
-                style: function(feature){
-                    var opts = {
-                        fillOpacity:    0.5,
-                        weight:         1,
-                        color:          '#000000',
-                        fillColor:      perc2color(rad2perc(feature.properties.radiation))
-                    };
-                    return opts;
-                }
-            }).addTo(map);
-        }
-
-        // Build the structured overlay grid
-        var grid_extent = [9.25, 46.25, 17.45, 49.1];
-        var options = {units: 'kilometres'};
-        var grid = turf.pointGrid(grid_extent, cellSide, options);
-
-        // Trim structured grid to points within the Austria polygon only
- //       var ptsWithin = turf.pointsWithinPolygon(grid, austria_poly);
-        var ptsWithin = grid;
-
         // Choose which method to calculate the radiation value for the points by
         switch(calc_method){
 
-            // Method A: Calculate which TIN polygon each point lies within
-            case 'vertex-average':
-                L.geoJson(ptsWithin, {
+            // Method A: Calculate which unstructured data point each point is nearest to    
+            case 'nearest-vertex': 
+
+                // Create the grid
+                var grid = turf.pointGrid(grid_extent, grid_size, {units: 'kilometres'});
+
+                L.geoJson(grid, {
                     onEachFeature: function (feature, layer) {
+                        var near_point = turf.nearestPoint(feature,rawDataPoints);
+                        feature.properties.radiation = near_point.properties.radiation;
+                    }
+                });        
+                break; 
+
+            // Method B: Calculate TIN polygons and determine which polygon each point lies within
+            case 'vertex-average':
+
+                // Create TIN polygons
+                var tin_polys = turf.tin(rawDataPoints, 'ref');
+
+                // Add radiation sum as property to each tin poly.
+                L.geoJson(tin_polys,{
+                    onEachFeature: function (polyfeat, layer) {
+                        var radiation_sum = 0;
+                        var fp = polyfeat.properties;
+                        rawDataPoints.features.forEach(function(rawPoint) {
+                            var rpp = rawPoint.properties;
+                            if((rpp.ref == fp.a)||(rpp.ref == fp.b)||(rpp.ref == fp.c)){
+                                radiation_sum += rpp.radiation;
+                            }
+                        });
+                        fp.radiation = radiation_sum/3;
+                }});
+
+                // Add TIN polygons to the map
+                if(show_tin_polygons){
+                    L.geoJson(tin_polys,{
+                        style: function(feature){
+                            var opts = {
+                                fillOpacity:    0.4,
+                                weight:         1,
+                                color:          '#000000',
+                                fillColor:      perc2color(rad2perc(feature.properties.radiation))
+                            };
+                            return opts;
+                        }
+                    }).addTo(map);
+                }
+
+                // Create the grid
+                var grid = turf.pointGrid(grid_extent, grid_size, {units: 'kilometres'});
+
+                // Calculate which tin poly each point is inside
+                L.geoJson(grid, {
+                    onEachFeature: function (feature, layer) {
+                        feature.properties.radiation = 0;
                         tin_polys.features.forEach(function(tin_feat) {
                             if(turf.booleanPointInPolygon(feature,tin_feat)){
                                 feature.properties.radiation = tin_feat.properties.radiation;
@@ -205,80 +195,20 @@ function initMap() {
                 });
                 break;
 
-            // Method B: Calculate which unstructured data point each point is nearest to    
-            case 'nearest-vertex': 
-                L.geoJson(ptsWithin, {
-                    onEachFeature: function (feature, layer) {
-                        var near_point = turf.nearestPoint(feature,rawDataPoints);
-                        feature.properties.radiation = near_point.properties.radiation;
-                    }
-                });        
-                break; 
-
-            // Method C: Calculate a weighted average to the three corners
+            // Method C: Calculate which unstructured data point each point is nearest to    
             case 'interpolate': 
-                L.geoJson(ptsWithin, {
-                    onEachFeature: function (feature, layer) {
-
-                        // 1: Get which polygon we are inside
-                        tin_polys.features.forEach(function(tin_feat) {
-                            if(turf.booleanPointInPolygon(feature,tin_feat)){
-
-                                // 2: Get the points on the corner of this polygon
-                                var nearest_points = [];
-                                rawDataPoints.features.forEach(function(feat) {
-                                    if(feat.properties.ref == tin_feat.properties.a){
-                                        nearest_points.push(feat);
-                                    }
-                                    if(feat.properties.ref == tin_feat.properties.b){
-                                        nearest_points.push(feat);
-                                    }
-                                    if(feat.properties.ref == tin_feat.properties.c){
-                                        nearest_points.push(feat);
-                                    }
-                                });
-
-                                // 3: Calculate an interpolation between these points
-                                var distances = [
-                                    turf.distance(feature,nearest_points[0]),
-                                    turf.distance(feature,nearest_points[1]),
-                                    turf.distance(feature,nearest_points[2])
-                                ];
-                                var dist_sum = distances[0]+distances[1]+distances[2];
-                                var radiations = [
-                                    nearest_points[0].properties.radiation,
-                                    nearest_points[1].properties.radiation,
-                                    nearest_points[2].properties.radiation
-                                ];
-
-                                var this_radiation = ((dist_sum-distances[0])/dist_sum)*radiations[0];
-                                this_radiation += ((dist_sum-distances[1])/dist_sum)*radiations[1];
-                                this_radiation += ((dist_sum-distances[2])/dist_sum)*radiations[2];
-
-                                feature.properties.radiation = this_radiation/2;
-
-                                return false; // break out of forEach to save computation cycles
-                            }
-                        });
-                    }
-                });
-
-                break;   
-            case 'interpolate-native': 
-
-                var ptsWithin = turf.interpolate(rawDataPoints, cellSide, {
+                var grid = turf.interpolate(rawDataPoints, grid_size, {
                     gridType: 'points',
                     property: 'radiation',
                     units: 'kilometres',
                     weight: 10
                 })
-            
                 break;
         }
 
         // Add structured grid points to map
         if(show_grid_points){
-            L.geoJson(ptsWithin, {
+            L.geoJson(grid, {
                 pointToLayer: function (feature, latlng) {
                     return L.circleMarker(latlng, {
                         // Stroke properties
@@ -305,21 +235,25 @@ function initMap() {
         }
 
         // Create the isobands
-        var isobands = turf.isobands(ptsWithin,breaks,{zProperty: 'radiation', breaksProperties: band_properties});
+        var isobands = turf.isobands(grid,breaks,{zProperty: 'radiation', breaksProperties: band_properties});
 
         // Crop them to the size of Austria (which is the only area we have valid data for)
         // We use Martinez for this
         var croppedisobands_array = [];
+        var i=0;
         L.geoJson(isobands, {
             onEachFeature: function (feature, layer) {
-                croppedisobands_array.push({
-                    type: "Feature",
-                    properties: feature.properties,
-                    geometry: {
-                        type: "MultiPolygon",
-                        coordinates: martinez.intersection(feature.geometry.coordinates,austria_poly.geometry.coordinates)
-                    }
-                });
+                // Filter out isobands with no geometry in them to avoid Martinez crashing
+                if(feature.geometry.coordinates.length > 0){
+                    croppedisobands_array.push({
+                        type: "Feature",
+                        properties: feature.properties,
+                        geometry: {
+                            type: "MultiPolygon",
+                            coordinates: martinez.intersection(feature.geometry.coordinates,austria_poly.geometry.coordinates)
+                        }
+                    });
+                }
             }
         });  
         var croppedisobands = turf.featureCollection(croppedisobands_array);  
