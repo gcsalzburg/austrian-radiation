@@ -54,6 +54,7 @@ p.credits{
     background: linear-gradient(to top, #c0dbc2 0%,#33ff30 16%,#4eb50a 40%,#fcfc2f 60%,#ff770f 75%,#ff0f0f 100%);
     width: 10px;
     height: 500px;
+    clip-path: url(#scale_clippath);
 }
 
 .scale_marker{
@@ -88,7 +89,7 @@ p.credits{
     height: 20px;
     line-height: 20px;
 }
-.scale_numbers li:not(:first-of-type):not(:last-of-type):after{
+/* .scale_numbers li:not(:first-of-type):not(:last-of-type):after{
     content: "";
     display: block;
     position: absolute;
@@ -98,7 +99,7 @@ p.credits{
     top: 9px;
     right: -20px;
     opacity: 0.8;
-}
+}*/
 .scale_numbers li.s_300{top:0px;}
 .scale_numbers li.s_250{top:83.33px;}
 .scale_numbers li.s_200{top:166.67px;}
