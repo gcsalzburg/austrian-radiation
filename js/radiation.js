@@ -54,7 +54,7 @@ function initMap() {
     var items = {};
 
     // Get JSON list of places
-    $.getJSON( "http://sfws.lfrz.at/json.php",{command: "getstations"}).done(function(data){
+    $.getJSON( "https://sfws.lfrz.at/json.php",{command: "getstations"}).done(function(data){
         $.each( data, function( key, val ) {
             items[key] = {
                 "n": val.n,
@@ -65,7 +65,7 @@ function initMap() {
                 "val":0.0
             };
         });
-        $.getJSON( "http://sfws.lfrz.at/json.php",{command: "getdata"}).done(function(data){
+        $.getJSON( "https://sfws.lfrz.at/json.php",{command: "getdata"}).done(function(data){
             $.each( data.values, function( key, val ) {
                 items[key].val = val.v;
                 if(val.v > range_sv[1]){
