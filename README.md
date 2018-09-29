@@ -53,4 +53,6 @@ Turf.js docs can be usefully supplemented with notes on each individual package 
 
 Turf intersect did not work reliably on MultiPolygons, hence Martinez was used. Another option would have been to [iterate over and split the shape into multiple Polygons](https://gis.stackexchange.com/questions/121396/convert-multipolygon-geojson-to-multiple-geojson-polygons) but this didn't seem very efficient!
 
-Always read the Github issues and docs - you find things not yet in the official documentation! (e.g: https://github.com/Turfjs/turf/issues/1031)
+Always read the Github issues and docs - you find things not yet in the official documentation! (e.g: https://github.com/Turfjs/turf/issues/1031). Although using a grid mask on the interpolate options didn't work, since the function snaps to the size of the data. So we need some fake data points!
+
+Stupid ordering!! https://macwright.org/lonlat/
