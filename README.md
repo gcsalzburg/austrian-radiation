@@ -52,6 +52,7 @@ Some useful resources from the production of this experiment:
 
 - Good overview of GeoJSON https://macwright.org/2015/03/23/geojson-second-bite.html
 - Loads of links and utils https://github.com/tmcw/awesome-geojson
+- Sandboxes for Leaflet, etc https://joeyklee.github.io/geosandbox/
 
 
 ## Other useful notes ##
@@ -63,6 +64,8 @@ Turf intersect did not work reliably on MultiPolygons, hence Martinez was used. 
 Always read the Github issues and docs - you find things not yet in the official documentation! (e.g: https://github.com/Turfjs/turf/issues/1031). Although using a grid mask on the interpolate options didn't work, since the function snaps to the size of the data. So we need some fake data points!
 
 Stupid ordering!! https://macwright.org/lonlat/
+
+Can add multiple clip paths if needed: https://stackoverflow.com/questions/37644696/is-it-possible-to-have-multiple-masks-with-clip-path
 
 ### Scaling maths ###
 

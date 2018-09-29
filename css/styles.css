@@ -122,3 +122,29 @@ p.credits{
     border-radius: 5px;
 }
 .isoband_popup .mapboxgl-popup-close-button{color:#fff;}
+
+.toggles{
+    position: absolute;
+    right: 30px;
+    bottom: 30px;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    line-height: 1.4em;
+    font-size: 0.8em;
+}
+.toggle_links{display:none;}
+.toggles a{
+    color: #000;
+    display: block;
+    text-decoration: none;
+    background-color: rgba(255,255,255,0.5);
+    padding: 2px 8px;
+    border-radius: 5px;
+    margin-top: 3px;
+}
+.toggles a:active{
+    background-color: rgba(255,255,255,1);    
+}
+.toggles a.active{
+    background-color: rgba(255,255,255,0.8);    
+}

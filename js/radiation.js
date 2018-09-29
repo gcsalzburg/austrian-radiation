@@ -19,13 +19,6 @@ var colour_scale = [                            // Gradient colour scale for rad
     [300, '#ff0f0f']
 ];
 
-// Visibility flags
-var show_austria        = false;
-var show_raw_points     = false;
-var show_tin_polygons   = false;
-var show_grid_points    = false;
-var show_isobands       = true;
-
 // Outline of Austria
 var austria_poly = JSON.parse(austria_outline_json);
 
@@ -256,48 +249,53 @@ function initMap() {
         //
         
         // Add outline of Austria to map
-        if(show_austria){
-            map.addLayer({
-                "id": "austria-outline",
-                "type": "fill",
-                "source": "austria-outline",
-                "paint": {
-                    "fill-color": "#ffffff",
-                    "fill-opacity": 0.5
-                }
-            });
-        }
+        map.addLayer({
+            "id": "austria-outline",
+            "type": "fill",
+            "source": "austria-outline",
+            'layout': {
+                'visibility': 'none'
+            },
+            "paint": {
+                "fill-color": "#ffffff",
+                "fill-opacity": 0.5
+            }
+        });
 
         // Add unstructured data points to map
-        if(show_raw_points){
-            map.addLayer({
-                'id': 'raw-data',
-                'type': 'circle',
-                'source': 'raw-data',
-                'paint': {
-                    'circle-radius': {
-                        property: 'radiation',
-                        stops: [
-                            [{zoom: 8, value: range_sv[0]}, 20],
-                            [{zoom: 8, value: range_sv[1]}, 50]
-                        ]
-                    },
-                    "circle-color": {
-                        property: 'radiation',
-                        stops: colour_scale
-                    },
-                    "circle-opacity": 0.4
-                }
-            });
-        }
+        map.addLayer({
+            'id': 'raw-data',
+            'type': 'circle',
+            'source': 'raw-data',
+            'layout': {
+                'visibility': 'none'
+            },
+            'paint': {
+                'circle-radius': {
+                    property: 'radiation',
+                    stops: [
+                        [{zoom: 8, value: range_sv[0]}, 20],
+                        [{zoom: 8, value: range_sv[1]}, 50]
+                    ]
+                },
+                "circle-color": {
+                    property: 'radiation',
+                    stops: colour_scale
+                },
+                "circle-opacity": 0.4
+            }
+        });
 
         
         // Add TIN polygons to the map
-        if(show_tin_polygons && calc_method=='average'){
+        if(calc_method=='average'){
             map.addLayer({
                 "id": "tin-polys",
                 "type": "fill",
                 "source": "tin-polys",
+                'layout': {
+                    'visibility': 'none'
+                },
                 'paint': {
                     "fill-color": {
                         'property': 'radiation',
@@ -310,69 +308,106 @@ function initMap() {
         }
 
         // Add unstructured data points to map
-        if(show_grid_points){
-            map.addLayer({
-                'id': 'grid',
-                'type': 'circle',
-                'source': 'grid',
-                'paint': {
-                    'circle-radius': 5,
-                    'circle-color': {
-                        'property': 'radiation',
-                        'stops': colour_scale
-                    },
-                    'circle-opacity': 1
-                }
-            });
-        }
+        map.addLayer({
+            'id': 'grid',
+            'type': 'circle',
+            'source': 'grid',
+            'layout': {
+                'visibility': 'none'
+            },
+            'paint': {
+                'circle-radius': 5,
+                'circle-color': {
+                    'property': 'radiation',
+                    'stops': colour_scale
+                },
+                'circle-opacity': 1
+            }
+        });
         
         // Draw isobands
-        if(show_isobands){
-            map.addLayer({
-                "id": "isobands",
-                "type": "fill",
-                "source": "isobands",
-                'paint': {
-                    "fill-color": {
-                        property: 'radiation_lower',
-                        stops: colour_scale
-                    },
-                    "fill-opacity": 0.9
+        map.addLayer({
+            "id": "isobands",
+            "type": "fill",
+            "source": "isobands",
+            'layout': {
+                'visibility': 'visible'
+            },
+            'paint': {
+                "fill-color": {
+                    property: 'radiation_lower',
+                    stops: colour_scale
+                },
+                "fill-opacity": 0.9
+            }
+        });
+
+        // Create toggle buttons for layers
+        var toggleableLayerIds = ['austria-outline', 'raw-data', 'grid', 'isobands'];
+
+        for (var i = 0; i < toggleableLayerIds.length; i++) {
+            var id = toggleableLayerIds[i];
+
+            var link = document.createElement('a');
+            link.href = '#';
+            if(map.getLayoutProperty(id, 'visibility') == 'visible'){
+                link.className = 'active';
+            }
+            link.textContent = id;
+
+            link.onclick = function (e) {
+                var clickedLayer = this.textContent;
+                e.preventDefault();
+                e.stopPropagation();
+
+                var visibility = map.getLayoutProperty(clickedLayer, 'visibility');
+
+                if (visibility === 'visible') {
+                    map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+                    this.className = '';
+                } else {
+                    this.className = 'active';
+                    map.setLayoutProperty(clickedLayer, 'visibility', 'visible');
                 }
-            });
+            };
 
-            // Add click and mouse hover effects
-            map.on('click', 'isobands', function (e) {
-                new mapboxgl.Popup({className: "isoband_popup"})
-                    .setLngLat(e.lngLat)
-                    .setHTML(e.features[0].properties.description)
-                    .addTo(map);
-            });
-
-            map.on('mouseenter', 'isobands', function (e) {
-                map.getCanvas().style.cursor = 'pointer';
-            }).on('mouseleave', 'isobands', function () {
-                map.getCanvas().style.cursor = '';
-            });
-
-            map.on("mousemove", "isobands", function(e) {
-                if (hover_isoband != e.features[0]) {
-                    var top_px = 500*(1-(e.features[0].properties.radiation_mid/300));
-                    console.log(e.features[0].properties.radiation_mid);
-                    $("#scale_marker").removeClass("hide").css("top",top_px); // more magic numbers!
-                    hover_isoband = e.features[0];
-                }
-            });
-            map.on("mouseleave", "isobands", function() {
-                hover_isoband =  null;
-                $("#scale_marker").addClass("hide");
-            });
-
-
+            var layers = document.getElementById('toggle_links');
+            layers.appendChild(link);
         }
+
+        // Add click and mouse hover effects
+        map.on('click', 'isobands', function (e) {
+            new mapboxgl.Popup({className: "isoband_popup"})
+                .setLngLat(e.lngLat)
+                .setHTML(e.features[0].properties.description)
+                .addTo(map);
+        });
+
+        map.on('mouseenter', 'isobands', function (e) {
+            map.getCanvas().style.cursor = 'pointer';
+        }).on('mouseleave', 'isobands', function () {
+            map.getCanvas().style.cursor = '';
+        });
+
+        map.on("mousemove", "isobands", function(e) {
+            if (hover_isoband != e.features[0]) {
+                var top_px = 500*(1-(e.features[0].properties.radiation_mid/300));
+                $("#scale_marker").removeClass("hide").css("top",top_px); // more magic numbers!
+                hover_isoband = e.features[0];
+            }
+        });
+        map.on("mouseleave", "isobands", function() {
+            hover_isoband =  null;
+            $("#scale_marker").addClass("hide");
+        });
 
     }
 };
+
+$("#nerds").on('click',function(){
+    $(this).hide();
+    $("#toggle_links").show();
+});
 
 function timeSince(timeStamp) {
     var now = new Date();
