@@ -30,10 +30,11 @@ var show_isobands       = true;
 var austria_poly = JSON.parse(austria_outline_json);
 
 // Variable allocation - do not edit
-var min_Rad = 100000000;
-var max_Rad = 0;
-var lower_bound;
-var upper_bound;
+var range_sv = [100000000,0];
+var range_names = ["",""];
+var data_age;
+var lower_bound;                // For isobands
+var upper_bound;                // For isobands
 
 var hover_isoband = null;
 
@@ -44,7 +45,7 @@ var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/gcsalzburg/cjmn85as2dzu12rpkmaw53hsj',
     center: [13.388446, 47.414591],
-    zoom: 6,
+    zoom: 7,
     minZoom: 4,
     maxZoom: 12,
     maxBounds: pan_bounds
@@ -74,14 +75,16 @@ function initMap() {
         $.getJSON( "http://sfws.lfrz.at/json.php",{command: "getdata"}).done(function(data){
             $.each( data.values, function( key, val ) {
                 items[key].val = val.v;
-                if(val.v > max_Rad){
-                    max_Rad = val.v;
+                if(val.v > range_sv[1]){
+                    range_sv[1] = val.v;
+                    range_names[1] = items[key].n;
                 }
-                if(val.v < min_Rad){
-                    min_Rad = val.v;
+                if(val.v < range_sv[0]){
+                    range_sv[0] = val.v;
+                    range_names[0] = items[key].n;
                 }
+                data_age = val.d; // save timestamp from data
             });
-            console.log({min_Rad,max_Rad});
             build_heatmap(items);
         });
         
@@ -91,12 +94,15 @@ function initMap() {
     function build_heatmap(items){
 
         // Set max/min values in text
-        $("#max_reading").text(max_Rad);
-        $("#min_reading").text(min_Rad);
+        $("#max_reading").text(range_sv[1]);
+        $("#min_reading").text(range_sv[0]);
+        $("#max_station").text(range_names[1]);
+        $("#min_station").text(range_names[0]);
+        $("#last_data").text(timeSince(data_age));
         
         // Update bounds for graphics now
-        lower_bound = Math.floor(min_Rad/increments)*increments;
-        upper_bound = Math.ceil(max_Rad/increments)*increments;
+        lower_bound = Math.floor(range_sv[0]/increments)*increments;
+        upper_bound = Math.ceil(range_sv[1]/increments)*increments;
 
         // Add Austria layer to map
         map.addSource("austria-outline", {"type": "geojson","data": austria_poly});
@@ -272,8 +278,8 @@ function initMap() {
                     'circle-radius': {
                         property: 'radiation',
                         stops: [
-                            [{zoom: 8, value: min_Rad}, 20],
-                            [{zoom: 8, value: max_Rad}, 50]
+                            [{zoom: 8, value: range_sv[0]}, 20],
+                            [{zoom: 8, value: range_sv[1]}, 50]
                         ]
                     },
                     "circle-color": {
@@ -367,3 +373,17 @@ function initMap() {
 
     }
 };
+
+function timeSince(timeStamp) {
+    var now = new Date();
+    var secondsPast = (now.getTime()/1000) - timeStamp;
+    if(secondsPast < 60){
+      return parseInt(secondsPast) + ' second' + ((parseInt(secondsPast) > 1) ? "s" : "") + ' ago';
+    }
+    if(secondsPast < 3660){
+      return parseInt(secondsPast/60) + ' minute' + ((parseInt(secondsPast/60) > 1) ? "s" : "") + ' ago';
+    }
+    if(secondsPast <= 86400){
+      return parseInt(secondsPast/3600) + ' hour' + ((parseInt(secondsPast/3600) > 1) ? "s" : "") + ' ago';
+    }
+  }

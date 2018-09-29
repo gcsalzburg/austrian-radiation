@@ -19,7 +19,9 @@
     <section class="intro">
         <h1>☢ Austrian Radiation</h1>
         <p>This map displays the current background radiation levels across Austria. The data comes from 111 of the Austrian <a href="https://www.bmnt.gv.at/umwelt/strahlen-atom/strahlen-warn-system/sfws.html" target="_blank">Strahlenfrühwarnsystem</a> (radiation early warning system) measurement stations.</p>
-        <p>Current max: <span id="max_reading"></span>nSv/h, min: <span id="min_reading"></span>nSv/h.</p>
+        <p>Current range: <span id="max_reading"></span>nSv/h (<span id="max_station"></span>) -  <span id="min_reading"></span>nSv/h (<span id="min_station"></span>).</p>
+        <p>Don't be alarmed, for comparison <a href="https://en.wikipedia.org/wiki/Banana_equivalent_dose" target="_blank">eating one banana</a> gives you a 98nSv dose. One dental x-ray is equivalent to around a 7500nSv.</p>
+        <p class="credits">Design and concept by <a href="https://github.com/gcsalzburg">George Cave</a><br>Latest data from: <span id="last_data"></span></p>
     </section>
     <div id='map'></div>
     <section class="scale">

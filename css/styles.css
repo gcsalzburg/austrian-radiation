@@ -38,6 +38,10 @@ p{
 p > a{
     color: #fff;
 }
+p.credits{
+    font-size: 0.8em;
+    font-weight: 500;
+}
 
 .scale_holder{
     display: block;
