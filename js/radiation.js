@@ -404,7 +404,9 @@ function initMap() {
     }
 };
 
-$("#nerds").on('click',function(){
+$("#nerds").on('click',function(e){
+    e.preventDefault();
+    e.stopPropagation();
     $(this).hide();
     $("#toggle_links").show();
 });
