@@ -144,16 +144,6 @@ function initMap() {
                 }
             }).addTo(map);
         }
-
-        // Create voronoi polygons around the data points
-        // This step is not needed, here for historical reasons only
-        // var voronoiPolygons = turf.voronoi(rawDataPoints);
-        // L.geoJson(voronoiPolygons,{
-        //      style: function(feature){
-        //         var opts = {fillOpacity:0, weight:2, color:'#ff0000'};
-        //         return opts;
-        //     }
-        // }).addTo(map);
      
         // Create TIN polygons
         var tin_polys = turf.tin(rawDataPoints, 'ref');
