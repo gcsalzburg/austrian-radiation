@@ -1,36 +1,45 @@
 # Austrian Radiation #
 
-The following notes are a skeleton of a longer article to be written later.
+![Screenshot of page](https://www.designedbycave.co.uk/austrian-radiation/img/screenshot.png)
 
-This project makes use of:
+This project builds a map of the current background radiation levels across Austria. The data comes from 111 of the Austrian [Strahlenfrühwarnsystem](https://www.bmnt.gv.at/umwelt/strahlen-atom/strahlen-warn-system/sfws.html) (radiation early warning system) measurement stations.
 
-- [Open API for radiation meters across Austria](http://sfws.lfrz.at/)
-- [Mapbox JS API (Leaflet)](https://www.mapbox.com/mapbox.js/api/v3.1.1/)
+Don't be alarmed by all the radiation! For comparison eating one banana gives you a 98nSv dose. One dental x-ray is equivalent to around a 7500nSv.
+
+## Tools ##
+
+This project is built with:
+
+- [Mapbox GL JS](https://www.mapbox.com/mapbox-gl-js/api/)
 - [Turf.js](http://turfjs.org/docs/)
 - [Martinez polygon clipping](https://github.com/w8r/martinez)
 
 ## Summary ##
 
-The idea was to provide a "rainfall weather-map" style display of radiation levels across Austria. 
+The concept was to provide a "rainfall weather-map" style display of radiation levels across Austria, using an open API discovered on the [SFWS](https://sfws.lfrz.at/) website. 
 
-The key challenges were to convert a set of arbitary data points from an API into a set of isobands. This involves converting unstructured points into a structured grid, a challenge for which Turf (and most other JS libraries) do not provide a native library. This is not an [uncommon challenge](https://gis.stackexchange.com/questions/76357/rendering-temperature-on-google-maps)! Isoband algorithms such as Marching Squares will only work on a gridded, structured data set. The GeoJSON format was used throughout. 
+The key challenges was to convert an arbitary array of (non-geocoded) data points into a set of isobands. Turf provides an implementation of the Marching Squares algorithm, but the data still required a little massaging to get it into a working format. The map also compares the output from two other interpolation methods: nearest neighbour and vertex averaging. The GeoJSON format was used throughout. 
 
-The transformation process for the data was as follows:
+The transformation process for the data is as follows:
 
 1. Read in JSON data from source API
 2. Transform data (pixels to co-ordinates) and save into GeoJSON array
-5. Calculate radiation level at each structured grid point across target area using one of various methods:
+3. Calculate radiation level at each structured grid point across target area using one of various methods:
    1. Nearest neighbour (iteration over unstructured grid)
    2. Vertex averaging (create TIN polygons and average corner points)
-   3. Interpolation (using turf/interpolate)
-4. Deal with points on grid outside of Austria.
+   3. Interpolation (using @turf/interpolate)
+4. Expand grid to deal with points outside of Austrian bounds and provide smooth isobands in next step
 6. Calculate isobands using Marching Squares algorithm across structured grid
-7. Crop isobands to outline of Austria
+7. Crop isobands to border of Austria
 8. Display data
 
 ## Useful links ##
 
 Some useful resources from the production of this experiment:
+
+<aside class="notice">
+TODO: Cleanup the list of links below
+</aside>
 
 ### Resources & docs ###
 
