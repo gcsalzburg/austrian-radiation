@@ -41,11 +41,18 @@ Some useful resources from the production of this experiment:
 - Marching Squares implementation (not used in the end in favour of the Turf.js native implementation) https://github.com/RaumZeit/MarchingSquares.js
 - Comparison of different intersect function speeds https://polygon-clipping.js.org/
 - Useful GeoJSON/Turf examples https://joeyklee.github.io/geosandbox/hello-turf.html
+- Country outlines source for Austria https://github.com/simonepri/geo-maps/blob/master/info/countries-land.md 
 
 ### Q&A support info ###
 
 - Summary of interpolation of scattered data using Matlab (used as a basis for how to construct this algorithm) https://www.mathworks.com/help/matlab/math/interpolating-scattered-data.html
 - How to add different styles and events to items in a FeatureCollection https://leafletjs.com/examples/choropleth/
+
+### GeoJSON notes ###
+
+- Good overview of GeoJSON https://macwright.org/2015/03/23/geojson-second-bite.html
+- Loads of links and utils https://github.com/tmcw/awesome-geojson
+
 
 ## Other useful notes ##
 
@@ -56,3 +63,15 @@ Turf intersect did not work reliably on MultiPolygons, hence Martinez was used. 
 Always read the Github issues and docs - you find things not yet in the official documentation! (e.g: https://github.com/Turfjs/turf/issues/1031). Although using a grid mask on the interpolate options didn't work, since the function snaps to the size of the data. So we need some fake data points!
 
 Stupid ordering!! https://macwright.org/lonlat/
+
+### Scaling maths ###
+
+```
+// Scaling
+// PLACE        LAT        LONG       X    Y
+// Nauders      46.891674  10.501469  87   276
+// Zistersdorf  48.541407  16.759886  640  61
+
+// X -> LONG (m=0.011317, c=9.516872)
+// Y -> LAT (m=-0.00767, c=49.00947) 
+```
