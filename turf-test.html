@@ -33,10 +33,17 @@ function initMap() {
     var increments = 5;                             // Number of sV in each isoband
     var grid_size = 10;                             // Distance between grid points, smaller = slower (km)
     var grid_extent = [9.25, 46.25, 17.45, 49.1];   // Size of grid to produce
-    
-    // Outline of Austria
+    var interp_weight = 10;                         // Exponent decay constant for interpolation grid (bigger = faster decay)
+    var calc_method = 'interpolate';                    // nearest || average || interpolate
 
-   
+    // Visibility flags
+    var show_austria        = false;
+    var show_raw_points     = false;
+    var show_tin_polygons   = false;
+    var show_grid_points    = false;
+    var show_isobands       = true;
+
+    // Outline of Austria
     var austria_outline_json = '{"type": "Feature", "properties":{}, "geometry": {"type":"Polygon","coordinates":[[[13.44451904296875, 48.55661410872126],[13.43902587890625, 48.449243890328724],[13.3319091796875, 48.32521295617702],[13.14239501953125, 48.28502057399577],[13.00506591796875, 48.25028349849022],[12.873229980468748, 48.193556524687395],[12.7496337890625, 48.103763074117765],[12.8924560546875, 47.95314495015594],[12.98583984375, 47.837127072368524],[12.90069580078125, 47.72269690266809],[13.04351806640625, 47.71715357016648],[13.10394287109375, 47.61356975397398],[13.04901123046875, 47.541309583656854],[12.98858642578125, 47.46152250874388],[12.76611328125, 47.57467282332527],[12.829284667968748, 47.61727271567975],[12.73040771484375, 47.67648444221321],[12.59307861328125, 47.67648444221321],[12.5738525390625, 47.633932798340716],[12.42828369140625, 47.69127688626756],[12.24151611328125, 47.702368466573716],[12.161865234375, 47.69312564683551],[12.2003173828125, 47.60986653003798],[11.97784423828125, 47.619124098197325],[11.8212890625, 47.585789182379905],[11.63726806640625, 47.589494110887394],[11.5631103515625, 47.517200697839414],[11.42578125, 47.5153457091302],[11.4093017578125, 47.454094290400015],[11.22802734375, 47.402067376409036],[10.997314453125, 47.402067376409036],[10.90118408203125, 47.52091047852614],[10.689697265625, 47.55428670127958],[10.46722412109375, 47.570966845786124],[10.42877197265625, 47.416937456635445],[10.360107421875, 47.342545069660225],[10.2777099609375, 47.29413372501023],[10.107421874999998, 47.372314620566925],[10.052490234375, 47.48380086737799],[9.939880371093748, 47.53203824675999],[9.788818359374998, 47.58764167941513],[9.68719482421875, 47.53203824675999],[9.5855712890625, 47.53018378265907],[9.64324951171875, 47.44666502261753],[9.6185302734375, 47.36115300722623],[9.5196533203125, 47.25686404408872],[9.60479736328125, 47.178512264439085],[9.6405029296875, 47.135556272359196],[9.61578369140625, 47.06450941441436],[9.879455566406248, 47.010225655683485],[9.88494873046875, 46.933385414813955],[10.0579833984375, 46.854556538855746],[10.250244140625, 46.88647742351024],[10.30792236328125, 46.931509883369316],[10.39031982421875, 46.9989876381546],[10.48095703125, 46.93901161506044],[10.469970703124998, 46.85079989251277],[10.65948486328125, 46.869580496513265],[10.77484130859375, 46.80569963924226],[11.01104736328125, 46.77184961467733],[11.1566162109375, 46.96713374957253],[11.346130371093748, 46.98962081759436],[11.41204833984375, 46.96713374957253],[11.51092529296875, 47.00460694243501],[11.62628173828125, 47.00273390667881],[11.75262451171875, 46.96900803311957],[12.18658447265625, 47.09630525444073],[12.238769531249998, 47.075733642316195],[12.12615966796875, 46.991494313050424],[12.2222900390625, 46.880845705719146],[12.27996826171875, 46.85831292242506],[12.27996826171875, 46.79253827035982],[12.3651123046875, 46.76620587423741],[12.466735839843748, 46.68336307047754],[12.81005859375, 46.6268063953552],[13.27423095703125, 46.5607488448596],[13.941650390625, 46.50217348354072],[14.441528320312498, 46.428392162921234],[14.5733642578125, 46.379149058330746],[14.724426269531252, 46.5002829039397],[14.7930908203125, 46.50406399740093],[14.886474609375, 46.61171462536894],[15.065002441406248, 46.66263249079177],[15.44677734375, 46.62303384721474],[15.575866699218748, 46.67582559793001],[15.845031738281248, 46.7248003746672],[16.01806640625, 46.66074749832068],[15.993347167968752, 46.83389173208538],[16.19659423828125, 46.92025531537451],[16.30096435546875, 47.01397113616876],[16.50421142578125, 47.00086080525214],[16.449279785156246, 47.202776377962714],[16.45751953125, 47.37975438400816],[16.6827392578125, 47.50050343862717],[16.64703369140625, 47.62467785241324],[16.446533203125, 47.65983792850961],[16.600341796875, 47.76702233051035],[16.754150390625, 47.69312564683551],[17.0947265625, 47.711609647845975],[17.02056884765625, 47.8666165573186],[17.1551513671875, 48.01381248943335],[17.08648681640625, 48.04320138974932],[16.9244384765625, 48.272225451004324],[16.86126708984375, 48.381793961204984],[16.94915771484375, 48.5493419587775],[16.89697265625, 48.72358515157852],[16.6717529296875, 48.73807825631017],[16.4630126953125, 48.808672325527844],[16.35040283203125, 48.73445537176822],[15.98236083984375, 48.783342285295475],[15.83404541015625, 48.88458571785511],[15.757141113281248, 48.84302835299516],[15.28472900390625, 48.982019588328214],[15.16387939453125, 48.94054322456003],[15.147399902343752, 48.99283383694351],[14.999084472656248, 49.01085236926211],[14.974365234375, 48.783342285295475],[14.820556640625, 48.785151998043155],[14.7216796875, 48.68189420361741],[14.7052001953125, 48.58750908593607],[14.59808349609375, 48.62746280105111],[14.474487304687498, 48.64561313162894],[14.400329589843748, 48.580241377838234],[14.3316650390625, 48.55661410872126],[14.20806884765625, 48.58932584966975],[14.01031494140625, 48.634723716904],[14.06524658203125, 48.66557095325139],[13.8482666015625, 48.77067246880509],[13.80706787109375, 48.596592251456705],[13.7274169921875, 48.511146022547344],[13.51318359375, 48.58932584966975],[13.44451904296875, 48.55661410872126]]]}}';
     var austria_poly = JSON.parse(austria_outline_json);
 
@@ -82,22 +89,9 @@ function initMap() {
         lower_bound = Math.floor(min_Rad/increments)*increments;
         upper_bound = Math.ceil(max_Rad/increments)*increments;
 
-        // Visibility flags
-        var show_austria        = false;
-        var show_raw_points     = false;
-        var show_tin_polygons   = false;
-        var show_grid_points    = false;
-        var show_isobands       = true;
-
-        // Options are:
-        // 'nearest-vertex' 
-        // 'vertex-average'
-        // 'interpolate''
-        var calc_method = 'interpolate';
-
         // Add outline of Austria to map
         if(show_austria){
-            L.geoJson(austria_poly,{fillOpacity:0.5, weight:2, color:'#ffffff'}).addTo(map);
+            L.geoJson(austria_poly,{fillOpacity:1, weight:2, color:'#ffffff'}).addTo(map);
         }
 
         // Create an array of points from the heatmap data values (TODO : move this into $.getJSON above in future)
@@ -130,7 +124,7 @@ function initMap() {
         switch(calc_method){
 
             // Method A: Calculate which unstructured data point each point is nearest to    
-            case 'nearest-vertex': 
+            case 'nearest': 
 
                 // Create the grid
                 var grid = turf.pointGrid(grid_extent, grid_size, {units: 'kilometres'});
@@ -144,7 +138,7 @@ function initMap() {
                 break; 
 
             // Method B: Calculate TIN polygons and determine which polygon each point lies within
-            case 'vertex-average':
+            case 'average':
 
                 // Create TIN polygons
                 var tin_polys = turf.tin(rawDataPoints, 'ref');
@@ -197,14 +191,36 @@ function initMap() {
 
             // Method C: Calculate which unstructured data point each point is nearest to    
             case 'interpolate': 
+
+                // Add "fake" duplicate points just outside the bounds to stretch coverage across whole of Austria
+                var rawDataFeatures = rawDataPoints.features;
+                rawDataFeatures.push(turf.point([15.451882,49.013285],{radiation: items["AT0716"].val})); // Waidhofen/Ybbs
+                rawDataFeatures.push(turf.point([14.887182,49.032998],{radiation: items["AT0514"].val})); // Gmünd/NÖ
+                rawDataFeatures.push(turf.point([14.549704,46.312700],{radiation: items["AT0305"].val})); // Bad Eisenkappel
+                rawDataFeatures.push(turf.point([9.442690,47.210770],{radiation: items["AT1906"].val}));  // Feldkirch
+                rawDataFeatures.push(turf.point([17.224055,48.144801],{radiation: items["AT0520"].val}));  // Hainburg
+                rawDataFeatures.push(turf.point([17.225467,47.799404],{radiation: items["AT0104"].val}));  // Frauenkirchen
+                rawDataPoints = turf.featureCollection(rawDataFeatures);
+
+                // Create interpolation grid
                 var grid = turf.interpolate(rawDataPoints, grid_size, {
                     gridType: 'points',
                     property: 'radiation',
                     units: 'kilometres',
-                    weight: 10
+                    weight: interp_weight
                 })
                 break;
         }
+
+        // Now deal with the points outside the bounds of the measured values.
+        // We give these a nearest-neighbour value, to fill out the small edges of the outline of Austria which would otherwise be missed
+        L.geoJson(grid, {
+            onEachFeature: function (feature, layer) {
+                if(feature.properties.radiation == 0){
+                    feature.properties.radiation = turf.nearestPoint(feature,rawDataPoints).properties.radiation;
+                }
+            }
+        });
 
         // Add structured grid points to map
         if(show_grid_points){
