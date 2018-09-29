@@ -12,8 +12,8 @@ var pan_bounds = new mapboxgl.LngLatBounds(     // Pan boundary for map interact
 );
 var colour_scale = [                            // Gradient colour scale for radiation values (nSv/h)
     [0,   '#c0dbc2'],                           // http://colorzilla.com/gradient-editor/#c0dbc2+1,33ff30+16,4eb50a+40,fcfc2f+60,ff770f+75,ff0f0f+100 
-    [48,  '#33ff30'],
-    [120, '#4eb50a'],
+    [48,  '#4eb50a'],
+    [120, '#33ff30'],
     [180, '#fcfc2f'],
     [225, '#ff770f'],
     [300, '#ff0f0f']

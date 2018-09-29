@@ -51,7 +51,7 @@ p.credits{
 }
 
 .scale_bar{
-    background: linear-gradient(to top, #c0dbc2 0%,#33ff30 16%,#4eb50a 40%,#fcfc2f 60%,#ff770f 75%,#ff0f0f 100%);
+    background: linear-gradient(to top, #c0dbc2 0%,#4eb50a 16%,#33ff30 40%,#fcfc2f 60%,#ff770f 75%,#ff0f0f 100%);
     width: 10px;
     height: 500px;
     clip-path: url(#scale_clippath);
