@@ -6,8 +6,18 @@ var grid_extent = [9.25, 46.25, 17.45, 49.1];   // Size of grid to produce
 var interp_weight = 10;                         // Exponent decay constant for interpolation grid (bigger = faster decay)
 var calc_method = 'interpolate';                // nearest || average || interpolate
 var unit = 'nSv/h';                             // unit of radiation values
-
-var pan_bounds = new mapboxgl.LngLatBounds([-18.166682, 28.605120], [40.239179, 61.138856]);
+var pan_bounds = new mapboxgl.LngLatBounds(     // Pan boundary for map interaction
+    [-18.166682, 28.605120],
+    [40.239179, 61.138856]
+);
+var colour_scale = [                            // Gradient colour scale for radiation values (nSv/h)
+    [0,   '#c0dbc2'],                           // http://colorzilla.com/gradient-editor/#c0dbc2+1,33ff30+16,4eb50a+40,fcfc2f+60,ff770f+75,ff0f0f+100 
+    [48,  '#33ff30'],
+    [120, '#4eb50a'],
+    [180, '#fcfc2f'],
+    [225, '#ff770f'],
+    [300, '#ff0f0f']
+];
 
 // Visibility flags
 var show_austria        = false;
@@ -268,10 +278,7 @@ function initMap() {
                     },
                     "circle-color": {
                         property: 'radiation',
-                        stops: [
-                            [min_Rad, '#00ff00'],
-                            [max_Rad, '#ff0000']
-                        ]
+                        stops: colour_scale
                     },
                     "circle-opacity": 0.4
                 }
@@ -288,10 +295,7 @@ function initMap() {
                 'paint': {
                     "fill-color": {
                         'property': 'radiation',
-                        'stops': [
-                            [min_Rad, '#00ff00'],
-                            [max_Rad, '#ff0000']
-                        ]
+                        'stops': colour_scale
                     },
                     "fill-opacity": 0.4,
                     'fill-outline-color': '#ffffff'
@@ -309,10 +313,7 @@ function initMap() {
                     'circle-radius': 5,
                     'circle-color': {
                         'property': 'radiation',
-                        'stops': [
-                            [min_Rad, '#00ff00'],
-                            [max_Rad, '#ff0000']
-                        ]
+                        'stops': colour_scale
                     },
                     'circle-opacity': 1
                 }
@@ -328,14 +329,7 @@ function initMap() {
                 'paint': {
                     "fill-color": {
                         property: 'radiation_lower',
-                        stops: [
-                            [0,   '#c0dbc2'],
-                            [48,  '#33ff30'],
-                            [120, '#4eb50a'],
-                            [180, '#fcfc2f'],
-                            [225, '#ff770f'],
-                            [300, '#ff0f0f']
-                        ]
+                        stops: colour_scale
                     },
                     "fill-opacity": 0.9
                 }
