@@ -102,3 +102,18 @@ p > a{
 .scale_numbers li.s_100{top:333.33px;}
 .scale_numbers li.s_50 {top:416.67px;}
 .scale_numbers li.s_nSvh{top:500px;}
+
+.isoband_popup.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip{border-top-color:#000;}
+.isoband_popup.mapboxgl-popup-anchor-right .mapboxgl-popup-tip{border-left-color:#000;}
+.isoband_popup.mapboxgl-popup-anchor-left .mapboxgl-popup-tip{border-right-color:#000;}
+.isoband_popup.mapboxgl-popup-anchor-top .mapboxgl-popup-tip{border-bottom-color:#000;}
+.isoband_popup .mapboxgl-popup-content{
+    background-color: #000;
+    color: #fff;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 1.2em;
+    padding: 15px;
+    border-radius: 5px;
+}
+.isoband_popup .mapboxgl-popup-close-button{color:#fff;}

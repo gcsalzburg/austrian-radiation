@@ -215,7 +215,7 @@ function initMap() {
             band_properties.push({
                 'radiation_lower':  i,
                 'radiation_mid':    Math.round(i+(increments/2)),
-                'description':      "Radiation: "+i+" - "+(i+increments)+" "+unit
+                'description':      i+" - "+(i+increments)+" "+unit
             });
         }
 
@@ -337,7 +337,7 @@ function initMap() {
 
             // Add click and mouse hover effects
             map.on('click', 'isobands', function (e) {
-                new mapboxgl.Popup()
+                new mapboxgl.Popup({className: "isoband_popup"})
                     .setLngLat(e.lngLat)
                     .setHTML(e.features[0].properties.description)
                     .addTo(map);
