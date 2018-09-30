@@ -441,9 +441,10 @@ function initMap() {
         // Find user location
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(function(position) {
-                console.log(position.coords.latitude, position.coords.longitude);
 
                 var user_loc = turf.point([position.coords.longitude, position.coords.latitude]);
+
+                // Add user marker to the map
                 map.addSource("user_location", {"type": "geojson","data": user_loc});
                 map.addLayer({
                     "id": "user_location",
@@ -476,7 +477,7 @@ function initMap() {
                 // Is user in Austria?
                 if(turf.booleanPointInPolygon(user_loc, austria_poly)){
 
-                    // Work out where they are:
+                    // Work out where they are in words with reverse geocoding:
                     $.getJSON(
                         "https://api.mapbox.com/geocoding/v5/mapbox.places/"+position.coords.longitude+","+position.coords.latitude+".json",{access_token: mapboxgl.accessToken})
                         .done(function(data){
@@ -498,7 +499,7 @@ function initMap() {
                             }
 
                             if(place_name){
-                                // Is user in Austria?
+                                // What's the radiation here:
                                 var user_radiation = null;
                                 isobands.features.forEach(function(isoband) {
                                     if(turf.booleanPointInPolygon(user_loc,isoband)){
@@ -513,9 +514,9 @@ function initMap() {
                             }
                         }
                     );
-                    }else{
-                        $("#my_radiation").hide();
-                    }
+                }else{
+                    $("#my_radiation").hide();
+                }
 
             },function(){
                 // Location was not available.
