@@ -74,7 +74,9 @@ Always read the Github issues and docs - you find things not yet in the official
 
 Stupid ordering!! https://macwright.org/lonlat/
 
-Can add multiple clip paths if needed: https://stackoverflow.com/questions/37644696/is-it-possible-to-have-multiple-masks-with-clip-path
+Can add multiple clip paths if needed: https://stackoverflow.com/questions/37644696/is-it-possible-to-have-multiple-masks-with-clip-path. Use percentages to scale as screen resizes.
+
+
 
 ### Scaling maths ###
 
