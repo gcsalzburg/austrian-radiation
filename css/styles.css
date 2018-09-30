@@ -161,7 +161,8 @@ p.credits{
         margin: 10px 0;
         position:relative;
         width: 100%;
-        min-height: 370px;
+        min-height: 340px;
+        padding-bottom: 30px;
     }
     h1{
         text-align: left;
