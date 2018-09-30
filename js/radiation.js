@@ -1,10 +1,12 @@
 
 // Variables
+var mapbox_token = 'pk.eyJ1IjoiZ2NzYWx6YnVyZyIsImEiOiJjam1pNm5uZmcwMXNyM3FtNGp6dTY3MGxsIn0.PmLPkI3T8UxjEIPnz7fxEA';
+
 var increments = 5;                             // Number of sV in each isoband
 var grid_size = 10;                             // Distance between grid points, smaller = slower (km)
-var grid_extent = [9.25, 46.25, 17.45, 49.1];   // Size of grid to produce
+var grid_extent = [9.25, 46.25, 17.45, 49.1];   // Area to fill with grid for measurements
 var interp_weight = 10;                         // Exponent decay constant for interpolation grid (bigger = faster decay)
-var calc_method = 'interpolate';                // nearest || average || interpolate
+var calc_method = 'interpolate';                    // nearest || average || interpolate
 var unit = 'nSv/h';                             // unit of radiation values
 var pan_bounds = new mapboxgl.LngLatBounds(     // Pan boundary for map interaction
     [-18.166682, 28.605120],
@@ -19,6 +21,11 @@ var colour_scale = [                            // Gradient colour scale for rad
     [300, '#ff0f0f']
 ];
 
+var lat_m = -0.00767;                           // y=mx+c for linear interpolation (pixels -> lat/lng)
+var lat_c = 49.00947;
+var lng_m = 0.011317;
+var lng_c = 9.516872;
+
 // Outline of Austria
 var austria_poly = JSON.parse(austria_outline_json);
 
@@ -32,8 +39,7 @@ var upper_bound;                // For isobands
 var hover_isoband = null;
 
 // Mapbox access token   
-mapboxgl.accessToken = 'pk.eyJ1IjoiZ2NzYWx6YnVyZyIsImEiOiJjam1pNm5uZmcwMXNyM3FtNGp6dTY3MGxsIn0.PmLPkI3T8UxjEIPnz7fxEA';
-
+mapboxgl.accessToken = mapbox_token;
 var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/gcsalzburg/cjmn85as2dzu12rpkmaw53hsj',
@@ -43,7 +49,6 @@ var map = new mapboxgl.Map({
     maxZoom: 12,
     maxBounds: pan_bounds
 });
-
 map.on('load', function () {
     initMap();
 });
@@ -52,12 +57,6 @@ map.on('load', function () {
 function initMap() {
 
     var items = {};
-
-    // y=mx+c for linear interpolation (pixels -> lat/lng)
-    var lat_m = -0.00767;
-    var lat_c = 49.00947;
-    var lng_m = 0.011317;
-    var lng_c = 9.516872;
 
     // Get JSON list of places
     $.getJSON( "https://sfws.lfrz.at/json.php",{command: "getstations"}).done(function(data){
