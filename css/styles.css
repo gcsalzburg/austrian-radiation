@@ -9,7 +9,13 @@
     text-shadow:none;
 }
 
-body { margin:0; padding:0; background-color: #bbbbbb;}
+body { margin:0; padding:0; background-color: #333;}
+.map_area{
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+}
 #map {
     position: absolute;
     top: 0;
@@ -147,4 +153,64 @@ p.credits{
 }
 .toggles a.active{
     background-color: rgba(255,255,255,0.8);    
+}
+
+/* Mobile last design, like normal :) */
+@media only screen and (max-width: 960px) {
+    .intro{
+        margin: 10px 0;
+        position:relative;
+        width: 100%;
+        min-height: 370px;
+    }
+    h1{
+        text-align: left;
+        margin: 1em 50px 1em 30px;
+    }
+    p{
+        margin:0 80px 10px 30px;
+        font-size: 0.9em;
+    }
+    p.credits{
+        text-align:right;
+        position: absolute;
+        right: 20px;
+        bottom: 10px;
+        margin:0;
+        font-size:0.6em;
+    }
+    .map_area{
+        position: relative;
+        top: auto;
+        bottom: auto;
+    }
+    #map{
+        top:auto;
+        bottom:auto;
+        height:500px;
+        position:relative;
+    }
+    .scale_maker{
+        display:none;
+    }
+    .scale_holder{
+        right: 20px;
+    }
+    .scale_bar{height: 300px;}
+    .scale_numbers li.s_250{display:none;}
+    .scale_numbers li.s_200{top:100px;}
+    .scale_numbers li.s_150{display:none;}
+    .scale_numbers li.s_100{top:200px;}
+    .scale_numbers li.s_50{display:none;}
+    .scale_numbers li.s_nSvh{top:300px;}
+
+
+	.toggles{
+        position: absolute;
+        left: 8px;
+        right: auto;
+        bottom: 40px;
+        font-size: 0.7em;
+        display: inline-block;
+    }
 }

@@ -24,7 +24,13 @@
         <p id="my_radiation"></p>
         <p class="credits">Design and concept by <a href="https://github.com/gcsalzburg">George Cave</a><br>Latest data from: <span id="last_data"></span></p>
     </section>
-    <div id='map'></div>
+    <section class="map_area">
+        <div id='map'></div>
+        <section class="toggles">
+            <a href="#nerds" id="nerds">nerds click here</a>
+            <div class="toggle_links" id="toggle_links"></div>
+        </section>
+    </section>
     <section class="scale">
         <div class="scale_holder">
             <div class="scale_bar"></div>
@@ -41,20 +47,24 @@
         </div>
     </section>
 
-    <section class="toggles">
-        <a href="#nerds" id="nerds">nerds click here</a>
-        <div class="toggle_links" id="toggle_links"></div>
-    </section>
 
-    <svg width="0" height="0">
+    <svg width="0" height="0" style="display:block" preserveAspectRatio="none" viewBox="0 0 100 100">
         <defs>
-            <clipPath id="scale_clippath">
+            <clipPath id="scale_clippath" clipPathUnits="objectBoundingBox" transform="scale(0.01 0.01)">
+                <!--
                 <polygon points="0,0 10,0 10,82.33 0,82.33"/>
                 <polygon points="0,84.33 10,84.33 10,165.67 0,165.67"/>
                 <polygon points="0,167.67 10,167.67 10,249 0,249"/>
                 <polygon points="0,251 10,251 10,332.33 0,332.33"/>
                 <polygon points="0,334.33 10,334.33 10,415.67 0,415.67"/>
                 <polygon points="0,417.67 10,417.67 10,500 0,500"/>
+                -->%
+                <polygon points="0,0 100,0 100,16.37 0,16.37"/>
+                <polygon points="0,16.97 100,16.97 100,33.03 0,33.03"/>
+                <polygon points="0,33.63 100,33.63 100,49.7 0,49.7"/>
+                <polygon points="0,50.3 100,50.3 100,66.37 0,66.37"/>
+                <polygon points="0,66.97 100,66.97 100,83.03 0,83.03"/>
+                <polygon points="0,83.63 100,83.63 100,100 0,100"/>
             </clipPath>
         </defs>
     </svg>
