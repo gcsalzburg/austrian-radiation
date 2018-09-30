@@ -43,7 +43,7 @@ mapboxgl.accessToken = mapbox_token;
 var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/gcsalzburg/cjmn85as2dzu12rpkmaw53hsj',
-    center: [13.388446, 47.414591],
+    center: [13.039088, 47.778603],
     zoom: 7,
     minZoom: 4,
     maxZoom: 12,
@@ -55,6 +55,9 @@ map.on('load', function () {
 
 
 function initMap() {
+
+    // Zoom map to fit Austria
+    map.fitBounds(grid_extent);
 
     var items = {};
 
