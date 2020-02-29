@@ -21,11 +21,6 @@ var colour_scale = [                            // Gradient colour scale for rad
     [300, '#ff0f0f']
 ];
 
-var lat_m = -0.00767;                           // y=mx+c for linear interpolation (pixels -> lat/lng)
-var lat_c = 49.00947;
-var lng_m = 0.011317;
-var lng_c = 9.516872;
-
 // Variable allocation - do not edit
 let range;
 let data_age;
