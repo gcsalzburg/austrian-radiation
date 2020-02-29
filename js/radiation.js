@@ -1,12 +1,11 @@
+import * as radiation_generate from './radiation_generate.js';
+import austria_poly from './austria-1km.js';
 
 // Variables
 var mapbox_token = 'pk.eyJ1IjoiZ2NzYWx6YnVyZyIsImEiOiJjam1pNm5uZmcwMXNyM3FtNGp6dTY3MGxsIn0.PmLPkI3T8UxjEIPnz7fxEA';
 
 var increments = 5;                             // Number of sV in each isoband
-var grid_size = 10;                             // Distance between grid points, smaller = slower (km)
-var grid_extent = [9.25, 46.25, 17.45, 49.1];   // Area to fill with grid for measurements
-var interp_weight = 10;                         // Exponent decay constant for interpolation grid (bigger = faster decay)
-var calc_method = 'interpolate';                    // nearest || average || interpolate
+
 var unit = 'nSv/h';                             // unit of radiation values
 var pan_bounds = new mapboxgl.LngLatBounds(     // Pan boundary for map interaction
     [-18.166682, 28.605120],
@@ -26,15 +25,10 @@ var lat_c = 49.00947;
 var lng_m = 0.011317;
 var lng_c = 9.516872;
 
-// Outline of Austria
-var austria_poly = JSON.parse(austria_outline_json);
-
 // Variable allocation - do not edit
 var range_sv = [100000000,0];
 var range_names = ["",""];
 var data_age;
-var lower_bound;                // For isobands
-var upper_bound;                // For isobands
 
 var hover_isoband = null;
 
@@ -54,488 +48,386 @@ map.on('load', function () {
 });
 
 
+
+// ////////////////////////////////
+
+
 function initMap() {
 
     // Zoom map to fit Austria
-    map.fitBounds(grid_extent);
+    map.fitBounds(radiation_generate.grid_extent);
 
     var items = {};
 
     // Get JSON list of places
     $.getJSON( "https://sfws.lfrz.at/json.php",{command: "getstations"}).done(function(data){
-        $.each( data, function( key, val ) {
-            items[key] = {
-                "name": val.n,
-                "x": val.x,
-                "y": val.y,
-                "lat":((lat_m*val.y)+lat_c),
-                "lng":((lng_m*val.x)+lng_c),
-                "val":0.0
-            };
-        });
-        $.getJSON( "https://sfws.lfrz.at/json.php",{command: "getdata"}).done(function(data){
-            $.each( data.values, function( key, val ) {
-                items[key].val = val.v;
-                if(val.v > range_sv[1]){
-                    range_sv[1] = val.v;
-                    range_names[1] = items[key].name;
-                }
-                if(val.v < range_sv[0]){
-                    range_sv[0] = val.v;
-                    range_names[0] = items[key].name;
-                }
-                data_age = val.d; // save timestamp from data
-            });
-            build_heatmap(items);
-        });
-        
-    });
+      $.each( data, function( key, val ) {
+         items[key] = {
+               "name": val.n,
+               "x": val.x,
+               "y": val.y,
+               "lat":((lat_m*val.y)+lat_c),
+               "lng":((lng_m*val.x)+lng_c),
+               "val":0.0
+         };
+      });
+      console.log(items);
+      $.getJSON( "https://sfws.lfrz.at/json.php",{command: "getdata"}).done(function(data){
+         $.each( data.values, function( key, val ) {
+               items[key].val = val.v;
+               if(val.v > range_sv[1]){
+                  range_sv[1] = val.v;
+                  range_names[1] = items[key].name;
+               }
+               if(val.v < range_sv[0]){
+                  range_sv[0] = val.v;
+                  range_names[0] = items[key].name;
+               }
+               data_age = val.d; // save timestamp from data
+         });
+         build_heatmap(items);
+         render_map();
+         render_ui();
+         render_geolocation();
+      });     
+   });
+}
+
+function fetch_json() {
+
+}
+
+function build_heatmap(items){
+
+   // Calculate isoband intervals
+   var intervals = radiation_generate.createintervals(
+      Math.floor(range_sv[0]/increments)*increments,
+      Math.ceil(range_sv[1]/increments)*increments,
+      increments,
+      unit
+   );
+   
+   // Create an array of points from the heatmap data values (TODO : move this into $.getJSON above in future)
+   var rawDataArray = [];
+   $.each(items, function(k,v){
+      var loc = turf.point([v.lng, v.lat], {radiation: v.val, station_name: v.name});
+      rawDataArray.push(loc);
+   });
+
+   // Create featureCollection from data points
+   var rawDataPoints = turf.featureCollection(rawDataArray);
+
+   // Add "fake" duplicate points just outside the bounds to stretch coverage across whole of Austria
+   var rawDataFeatures = rawDataPoints.features;
+   rawDataFeatures.push(turf.point([15.451882,49.013285],{radiation: items["AT0716"].val})); // Waidhofen/Ybbs
+   rawDataFeatures.push(turf.point([14.887182,49.032998],{radiation: items["AT0514"].val})); // Gmünd/NÖ
+   rawDataFeatures.push(turf.point([14.549704,46.312700],{radiation: items["AT0305"].val})); // Bad Eisenkappel
+   rawDataFeatures.push(turf.point([9.442690,47.210770], {radiation: items["AT1906"].val}));  // Feldkirch
+   rawDataFeatures.push(turf.point([17.224055,48.144801],{radiation: items["AT0520"].val}));  // Hainburg
+   rawDataFeatures.push(turf.point([17.225467,47.799404],{radiation: items["AT0104"].val}));  // Frauenkirchen
+   rawDataPoints = turf.featureCollection(rawDataFeatures);
+
+   // Generate isoband data
+   var isodata = radiation_generate.points2isobands(rawDataPoints, intervals);
+
+   var grid = isodata.grid;
+   var croppedisobands = isodata.isobands;
 
 
-    function build_heatmap(items){
+   // Rendering begins below...
 
-        // Set max/min values in text
-        $("#max_reading").text(range_sv[1]);
-        $("#min_reading").text(range_sv[0]);
-        $("#max_station").text(range_names[1]);
-        $("#min_station").text(range_names[0]);
-        $("#last_data").text(timeSince(data_age));
-        
-        // Update bounds for graphics now
-        lower_bound = Math.floor(range_sv[0]/increments)*increments;
-        upper_bound = Math.ceil(range_sv[1]/increments)*increments;
-
-        // Add Austria layer to map
-        map.addSource("austria-outline", {"type": "geojson","data": austria_poly});
-
-        // Create an array of points from the heatmap data values (TODO : move this into $.getJSON above in future)
-        var rawDataArray = [];
-        $.each(items, function(k,v){
-            var loc = turf.point([v.lng, v.lat], {radiation: v.val, station_name: v.name});
-            rawDataArray.push(loc);
-        });
-
-        // Create featureCollection of unstructured data points
-        var rawDataPoints = turf.featureCollection(rawDataArray);
-
-        // Add unique identifier to each point (e.g. to be used in back reference from TIN coords)
-        var index = 0;
-        rawDataPoints.features.forEach(function(f) {
-            f.properties.ref = index;
-            index++;
-        });
-
-        // Add raw-data and stations as a map source
-        map.addSource("stations", {"type": "geojson","data": rawDataPoints});
-        map.addSource("raw-data", {"type": "geojson","data": rawDataPoints});
-
-        // Choose which method to calculate the radiation value for the points by
-        switch(calc_method){
-
-            // Method A: Calculate which unstructured data point each point is nearest to    
-            case 'nearest': 
-
-                // Create the grid
-                var grid = turf.pointGrid(grid_extent, grid_size, {units: 'kilometres'});
-
-                grid.features.forEach(function(f) {
-                    var near_point = turf.nearestPoint(f,rawDataPoints);
-                    f.properties.radiation = near_point.properties.radiation;
-                });        
-                break; 
-
-            // Method B: Calculate TIN polygons and determine which polygon each point lies within
-            case 'average':
-
-                // Create TIN polygons
-                var tin_polys = turf.tin(rawDataPoints, 'ref');
-
-                // Add radiation sum as property to each tin poly.
-                tin_polys.features.forEach(function(polyfeat) {
-                    var radiation_sum = 0;
-                    var fp = polyfeat.properties;
-                    rawDataPoints.features.forEach(function(rawPoint) {
-                        var rpp = rawPoint.properties;
-                        if((rpp.ref == fp.a)||(rpp.ref == fp.b)||(rpp.ref == fp.c)){
-                            radiation_sum += rpp.radiation;
-                        }
-                    });
-                    fp.radiation = radiation_sum/3;
-                });
-
-                // Add TIN polys as a map source
-                map.addSource("tin-polys", {"type": "geojson","data": tin_polys});
-
-                // Create the grid
-                var grid = turf.pointGrid(grid_extent, grid_size, {units: 'kilometres'});
-
-                // Calculate which tin poly each point is inside
-                // TODO: Change from forEach to different loop format to enable break out after test passes
-                grid.features.forEach(function(f) {
-                    f.properties.radiation = 0;
-                    tin_polys.features.forEach(function(tin_feat) {
-                        if(turf.booleanPointInPolygon(f,tin_feat)){
-                            f.properties.radiation = tin_feat.properties.radiation;
-                        }
-                    });
-                });
-                break;
-
-            // Method C: Calculate which unstructured data point each point is nearest to    
-            case 'interpolate': 
-
-                // Add "fake" duplicate points just outside the bounds to stretch coverage across whole of Austria
-                var rawDataFeatures = rawDataPoints.features;
-                rawDataFeatures.push(turf.point([15.451882,49.013285],{radiation: items["AT0716"].val})); // Waidhofen/Ybbs
-                rawDataFeatures.push(turf.point([14.887182,49.032998],{radiation: items["AT0514"].val})); // Gmünd/NÖ
-                rawDataFeatures.push(turf.point([14.549704,46.312700],{radiation: items["AT0305"].val})); // Bad Eisenkappel
-                rawDataFeatures.push(turf.point([9.442690,47.210770],{radiation: items["AT1906"].val}));  // Feldkirch
-                rawDataFeatures.push(turf.point([17.224055,48.144801],{radiation: items["AT0520"].val}));  // Hainburg
-                rawDataFeatures.push(turf.point([17.225467,47.799404],{radiation: items["AT0104"].val}));  // Frauenkirchen
-                rawDataPoints = turf.featureCollection(rawDataFeatures);
-
-                // Create interpolation grid
-                var grid = turf.interpolate(rawDataPoints, grid_size, {
-                    gridType: 'points',
-                    property: 'radiation',
-                    units: 'kilometres',
-                    weight: interp_weight
-                })
-                break;
-        }
-
-        // Now deal with the points outside the bounds of the measured values.
-        // We give these a nearest-neighbour value, to fill out the small edges of the outline of Austria which would otherwise be missed
-        grid.features.forEach(function(f) {
-            if(f.properties.radiation == 0){
-                f.properties.radiation = turf.nearestPoint(f,rawDataPoints).properties.radiation;
-            }
-        });
-
-        // Add grid as a map source
-        map.addSource("grid", {"type": "geojson","data": grid});
-
-        // Calculate isoband intervals and properties
-        var breaks = [];
-        var band_properties = [];
-        for(i=lower_bound; i<=upper_bound; i+=increments){
-            breaks.push(i);
-            band_properties.push({
-                'radiation_lower':  i,
-                'radiation_mid':    Math.round(i+(increments/2)),
-                'description':      i+" - "+(i+increments)+" "+unit
-            });
-        }
-
-        // Create the isobands
-        var isobands = turf.isobands(grid,breaks,{zProperty: 'radiation', breaksProperties: band_properties});
-
-        // Crop them to the size of Austria (which is the only area we have valid data for)
-        // We use Martinez for this
-        var croppedisobands_array = [];
-        var i=0;
-        isobands.features.forEach(function(f) {
-            // Filter out isobands with no geometry in them to avoid Martinez crashing
-            if(f.geometry.coordinates.length > 0){
-                croppedisobands_array.push({
-                    type: "Feature",
-                    properties: f.properties,
-                    geometry: {
-                        type: "MultiPolygon",
-                        coordinates: martinez.intersection(f.geometry.coordinates,austria_poly.geometry.coordinates)
-                    }
-                });
-            }
-        });  
-        var croppedisobands = turf.featureCollection(croppedisobands_array);  
-
-        // Add isobands as a map source
-        map.addSource("isobands", {"type": "geojson","data": croppedisobands});
+   // Set max/min values in text
+   $("#max_reading").text(range_sv[1]);
+   $("#min_reading").text(range_sv[0]);
+   $("#max_station").text(range_names[1]);
+   $("#min_station").text(range_names[0]);
+   $("#last_data").text(timeSince(data_age));
+                     
+   // Add map source ready for rendering
+   map.addSource("austria-outline", {"type": "geojson","data": austria_poly});
+   map.addSource("stations", {"type": "geojson","data": rawDataPoints});
+   map.addSource("raw-data", {"type": "geojson","data": rawDataPoints}); 
+   map.addSource("isobands", {"type": "geojson","data": croppedisobands});
+   map.addSource("grid", {"type": "geojson","data": grid});
+}
 
 
-        //
-        // Rendering tasks happen below
-        //
-        
-        // Add outline of Austria to map
-        map.addLayer({
-            "id": "austria-outline",
+// Render all data to map
+function render_map(){
+
+   // Add outline of Austria to map
+   map.addLayer({
+      "id": "austria-outline",
+      "type": "fill",
+      "source": "austria-outline",
+      'layout': {
+            'visibility': 'none'
+      },
+      "paint": {
+            "fill-color": "#ffffff",
+            "fill-opacity": 0.5
+      }
+   });
+
+   // Add unstructured data points to map
+   map.addLayer({
+      'id': 'raw-data',
+      'type': 'circle',
+      'source': 'raw-data',
+      'layout': {
+            'visibility': 'none'
+      },
+      'paint': {
+            'circle-radius': {
+               property: 'radiation',
+               stops: [
+                  [{zoom: 8, value: range_sv[0]}, 20],
+                  [{zoom: 8, value: range_sv[1]}, 50]
+               ]
+            },
+            "circle-color": {
+               property: 'radiation',
+               stops: colour_scale
+            },
+            "circle-opacity": 0.4
+      }
+   });
+  
+   // Add TIN polygons to the map
+   /* if(calc_method=='average'){
+      map.addLayer({
+            "id": "tin-polys",
             "type": "fill",
-            "source": "austria-outline",
+            "source": "tin-polys",
             'layout': {
-                'visibility': 'none'
-            },
-            "paint": {
-                "fill-color": "#ffffff",
-                "fill-opacity": 0.5
-            }
-        });
-
-        // Add unstructured data points to map
-        map.addLayer({
-            'id': 'raw-data',
-            'type': 'circle',
-            'source': 'raw-data',
-            'layout': {
-                'visibility': 'none'
+               'visibility': 'none'
             },
             'paint': {
-                'circle-radius': {
-                    property: 'radiation',
-                    stops: [
-                        [{zoom: 8, value: range_sv[0]}, 20],
-                        [{zoom: 8, value: range_sv[1]}, 50]
-                    ]
-                },
-                "circle-color": {
-                    property: 'radiation',
-                    stops: colour_scale
-                },
-                "circle-opacity": 0.4
+               "fill-color": {
+                  'property': 'radiation',
+                  'stops': colour_scale
+               },
+               "fill-opacity": 0.4,
+               'fill-outline-color': '#ffffff'
             }
-        });
+      });
+   }*/
 
+   // Add unstructured data points to map
+   map.addLayer({
+      'id': 'grid',
+      'type': 'circle',
+      'source': 'grid',
+      'layout': {
+            'visibility': 'none'
+      },
+      'paint': {
+            'circle-radius': 5,
+            'circle-color': {
+               'property': 'radiation',
+               'stops': colour_scale
+            },
+            'circle-opacity': 1
+      }
+   });
         
-        // Add TIN polygons to the map
-        if(calc_method=='average'){
-            map.addLayer({
-                "id": "tin-polys",
-                "type": "fill",
-                "source": "tin-polys",
-                'layout': {
-                    'visibility': 'none'
-                },
-                'paint': {
-                    "fill-color": {
-                        'property': 'radiation',
-                        'stops': colour_scale
-                    },
-                    "fill-opacity": 0.4,
-                    'fill-outline-color': '#ffffff'
-                }
-            });
-        }
+   // Draw isobands
+   map.addLayer({
+      "id": "isobands",
+      "type": "fill",
+      "source": "isobands",
+      'layout': {
+            'visibility': 'visible'
+      },
+      'paint': {
+            "fill-color": {
+               property: 'radiation_lower',
+               stops: colour_scale
+            },
+            "fill-opacity": 1,
+      }
+   });
 
-        // Add unstructured data points to map
-        map.addLayer({
-            'id': 'grid',
-            'type': 'circle',
-            'source': 'grid',
+   // Add unstructured data points to map
+   map.addLayer({
+      'id': 'stations',
+      'type': 'circle',
+      'source': 'stations',
+      'layout': {
+            'visibility': 'none'
+      },
+      'paint': {
+            'circle-radius': {
+               stops: [
+                  [4, 4],
+                  [8, 12],
+                  [12, 30]
+               ]
+            },
+            "circle-color": '#000000',
+            "circle-opacity": 1,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": '#ffffff'
+      }
+   });
+}
+
+function render_ui(){
+   // Create toggle buttons for layers
+   var toggle_layers = ['austria-outline', 'raw-data', 'grid', 'isobands', 'stations'];
+
+   for (var i = 0; i < toggle_layers.length; i++) {
+      var id = toggle_layers[i];
+
+      var link = document.createElement('a');
+      link.href = '#';
+      if(map.getLayoutProperty(id, 'visibility') == 'visible'){
+            link.className = 'active';
+      }
+      link.textContent = id;
+
+      link.onclick = function (e) {
+            var clickedLayer = this.textContent;
+            e.preventDefault();
+            e.stopPropagation();
+
+            var visibility = map.getLayoutProperty(clickedLayer, 'visibility');
+
+            if (visibility === 'visible') {
+               map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+               this.className = '';
+            } else {
+               this.className = 'active';
+               map.setLayoutProperty(clickedLayer, 'visibility', 'visible');
+            }
+      };
+
+      var layers = document.getElementById('toggle_links');
+      layers.appendChild(link);
+   }
+
+   // Add click and mouse hover effects
+   map.on('click', 'isobands', function (e) {
+      new mapboxgl.Popup({className: "isoband_popup"})
+            .setLngLat(e.lngLat)
+            .setHTML(e.features[0].properties.description)
+            .addTo(map);
+   });
+   map.on('click', 'stations', function (e) {
+      new mapboxgl.Popup({className: "isoband_popup"})
+            .setLngLat(e.lngLat)
+            .setHTML(e.features[0].properties.station_name + " ("+e.features[0].properties.radiation+"nSv/h)")
+            .addTo(map);
+   });
+
+   map.on('mouseenter', 'isobands', function (e) {
+      map.getCanvas().style.cursor = 'pointer';
+   }).on('mouseleave', 'isobands', function () {
+      map.getCanvas().style.cursor = '';
+   });
+
+   map.on("mousemove", "isobands", function(e) {
+      if (hover_isoband != e.features[0]) {
+            var top_px = 500*(1-(e.features[0].properties.radiation_mid/300)); // more magic numbers!
+            $("#scale_marker").removeClass("hide").css("top",top_px);
+            hover_isoband = e.features[0];
+      }
+   });
+   map.on("mouseleave", "isobands", function() {
+      hover_isoband =  null;
+      $("#scale_marker").addClass("hide");
+   });
+   
+   $("#nerds").on('click',function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      $(this).hide();
+      $("#toggle_links").show();
+   });
+}
+
+function render_geolocation(){
+
+   // Find user location
+   if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+
+         var user_loc = turf.point([position.coords.longitude, position.coords.latitude]);
+
+         // Add user marker to the map
+         map.addSource("user_location", {"type": "geojson","data": user_loc});
+         map.addLayer({
+            "id": "user_location",
+            "type": "circle",
+            "source": "user_location",
             'layout': {
-                'visibility': 'none'
+               'visibility': 'visible'
             },
             'paint': {
-                'circle-radius': 5,
-                'circle-color': {
-                    'property': 'radiation',
-                    'stops': colour_scale
-                },
-                'circle-opacity': 1
+               'circle-radius': 8,
+               "circle-opacity": 0,
+               "circle-stroke-width": 2,
+               "circle-stroke-color": '#fff'
             }
-        });
-        
-        // Draw isobands
-        map.addLayer({
-            "id": "isobands",
-            "type": "fill",
-            "source": "isobands",
+         });
+         map.addLayer({
+            "id": "user_location_dot",
+            "type": "circle",
+            "source": "user_location",
             'layout': {
-                'visibility': 'visible'
+               'visibility': 'visible'
             },
             'paint': {
-                "fill-color": {
-                    property: 'radiation_lower',
-                    stops: colour_scale
-                },
-                "fill-opacity": 1,
+               'circle-radius': 5,
+               "circle-color": '#fff',
+               "circle-opacity": 1,
             }
-        });
+         });
 
-        // Add unstructured data points to map
-        map.addLayer({
-            'id': 'stations',
-            'type': 'circle',
-            'source': 'stations',
-            'layout': {
-                'visibility': 'none'
-            },
-            'paint': {
-                'circle-radius': {
-                    stops: [
-                        [4, 4],
-                        [8, 12],
-                        [12, 30]
-                    ]
-                },
-                "circle-color": '#000000',
-                "circle-opacity": 1,
-                "circle-stroke-width": 2,
-                "circle-stroke-color": '#ffffff'
-            }
-        });
+         // Is user in Austria?
+         if(turf.booleanPointInPolygon(user_loc, austria_poly)){
 
-        // Create toggle buttons for layers
-        var toggle_layers = ['austria-outline', 'raw-data', 'grid', 'isobands', 'stations'];
-        var interpolate_methods = ['nearest','average','interpolate'];
+            // Work out where they are in words with reverse geocoding:
+            const reverse_mapbox_url = "https://api.mapbox.com/geocoding/v5/mapbox.places/"+position.coords.longitude+","+position.coords.latitude+".json";
+            $.getJSON(reverse_mapbox_url,{access_token: mapboxgl.accessToken}).done(function(data){
 
-        for (var i = 0; i < toggle_layers.length; i++) {
-            var id = toggle_layers[i];
+               var place_name = null;
+               // Pass one, look for a "place" e.g. "Grödig, Salzburg, Austria"
+               data.features.forEach(function(f) {
+                  if(f.place_type[0] == "place"){
+                     place_name = f.place_name;
+                  }
+               });  
+               if(place_name == null){
+                  // Pass one, look for a "region" e.g. "Salzburg, Austria"
+                  data.features.forEach(function(f) {
+                     if(f.place_type[0] == "region"){
+                           place_name = f.place_name;
+                     }
+                  }); 
+               }
 
-            var link = document.createElement('a');
-            link.href = '#';
-            if(map.getLayoutProperty(id, 'visibility') == 'visible'){
-                link.className = 'active';
-            }
-            link.textContent = id;
-
-            link.onclick = function (e) {
-                var clickedLayer = this.textContent;
-                e.preventDefault();
-                e.stopPropagation();
-
-                var visibility = map.getLayoutProperty(clickedLayer, 'visibility');
-
-                if (visibility === 'visible') {
-                    map.setLayoutProperty(clickedLayer, 'visibility', 'none');
-                    this.className = '';
-                } else {
-                    this.className = 'active';
-                    map.setLayoutProperty(clickedLayer, 'visibility', 'visible');
-                }
-            };
-
-            var layers = document.getElementById('toggle_links');
-            layers.appendChild(link);
-        }
-
-        // Add click and mouse hover effects
-        map.on('click', 'isobands', function (e) {
-            new mapboxgl.Popup({className: "isoband_popup"})
-                .setLngLat(e.lngLat)
-                .setHTML(e.features[0].properties.description)
-                .addTo(map);
-        });
-        map.on('click', 'stations', function (e) {
-            new mapboxgl.Popup({className: "isoband_popup"})
-                .setLngLat(e.lngLat)
-                .setHTML(e.features[0].properties.station_name + " ("+e.features[0].properties.radiation+"nSv/h)")
-                .addTo(map);
-        });
-
-        map.on('mouseenter', 'isobands', function (e) {
-            map.getCanvas().style.cursor = 'pointer';
-        }).on('mouseleave', 'isobands', function () {
-            map.getCanvas().style.cursor = '';
-        });
-
-        map.on("mousemove", "isobands", function(e) {
-            if (hover_isoband != e.features[0]) {
-                var top_px = 500*(1-(e.features[0].properties.radiation_mid/300)); // more magic numbers!
-                $("#scale_marker").removeClass("hide").css("top",top_px);
-                hover_isoband = e.features[0];
-            }
-        });
-        map.on("mouseleave", "isobands", function() {
-            hover_isoband =  null;
-            $("#scale_marker").addClass("hide");
-        });
-
-        // Find user location
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-
-                var user_loc = turf.point([position.coords.longitude, position.coords.latitude]);
-
-                // Add user marker to the map
-                map.addSource("user_location", {"type": "geojson","data": user_loc});
-                map.addLayer({
-                    "id": "user_location",
-                    "type": "circle",
-                    "source": "user_location",
-                    'layout': {
-                        'visibility': 'visible'
-                    },
-                    'paint': {
-                        'circle-radius': 8,
-                        "circle-opacity": 0,
-                        "circle-stroke-width": 2,
-                        "circle-stroke-color": '#fff'
-                    }
-                });
-                map.addLayer({
-                    "id": "user_location_dot",
-                    "type": "circle",
-                    "source": "user_location",
-                    'layout': {
-                        'visibility': 'visible'
-                    },
-                    'paint': {
-                        'circle-radius': 5,
-                        "circle-color": '#fff',
-                        "circle-opacity": 1,
-                    }
-                });
-
-                // Is user in Austria?
-                if(turf.booleanPointInPolygon(user_loc, austria_poly)){
-
-                    // Work out where they are in words with reverse geocoding:
-                    $.getJSON(
-                        "https://api.mapbox.com/geocoding/v5/mapbox.places/"+position.coords.longitude+","+position.coords.latitude+".json",{access_token: mapboxgl.accessToken})
-                        .done(function(data){
-
-                            var place_name = null;
-                            // Pass one, look for a "place" e.g. "Grödig, Salzburg, Austria"
-                            data.features.forEach(function(f) {
-                                if(f.place_type[0] == "place"){
-                                    place_name = f.place_name;
-                                }
-                            });  
-                            if(place_name == null){
-                                // Pass one, look for a "region" e.g. "Salzburg, Austria"
-                                data.features.forEach(function(f) {
-                                    if(f.place_type[0] == "region"){
-                                        place_name = f.place_name;
-                                    }
-                                }); 
-                            }
-
-                            if(place_name){
-                                // What's the radiation here:
-                                var user_radiation = null;
-                                isobands.features.forEach(function(isoband) {
-                                    if(turf.booleanPointInPolygon(user_loc,isoband)){
-                                        user_radiation = isoband.properties.radiation_mid;
-                                    }
-                                });
-                                if(user_radiation){
-                                    $("#my_radiation").text("Background radiation in "+place_name.replace(/, Austria/gi, '')+": "+user_radiation+"nSv/h");
-                                }
-                            }else{
-                                $("#my_radiation").hide();
-                            }
-                        }
-                    );
-                }else{
-                    $("#my_radiation").hide();
-                }
-
-            },function(){
-                // Location was not available.
-              });
-        } else {
-            // Not possible to get location
-        }
-
-    }
-};
-
-$("#nerds").on('click',function(e){
-    e.preventDefault();
-    e.stopPropagation();
-    $(this).hide();
-    $("#toggle_links").show();
-});
+               if(place_name){
+                  // What's the radiation here:
+                  var user_radiation = radiation_generate.radiation_at(user_loc);
+                  if(user_radiation){
+                     $("#my_radiation").text("Background radiation in "+place_name.replace(/, Austria/gi, '')+": "+user_radiation+"nSv/h");
+                  }
+               }else{
+                  $("#my_radiation").hide();
+               }
+               }
+            );
+         }else{
+            $("#my_radiation").hide();
+         }
+      },function(){
+         // Location was not available.
+      });
+   } else {
+      // Not possible to get location
+   }
+}
 
 function timeSince(timeStamp) {
     var now = new Date();
