@@ -1,5 +1,6 @@
 import * as radiation_generate from './radiation_generate.js';
 import austria_poly from './austria-1km.js';
+import stations from './stations.js';
 
 // Variables
 var mapbox_token = 'pk.eyJ1IjoiZ2NzYWx6YnVyZyIsImEiOiJjam1pNm5uZmcwMXNyM3FtNGp6dTY3MGxsIn0.PmLPkI3T8UxjEIPnz7fxEA';
@@ -26,9 +27,8 @@ var lng_m = 0.011317;
 var lng_c = 9.516872;
 
 // Variable allocation - do not edit
-var range_sv = [100000000,0];
-var range_names = ["",""];
-var data_age;
+let range;
+let data_age;
 
 var hover_isoband = null;
 
@@ -50,110 +50,49 @@ map.on('load', function () {
 
 
 // ////////////////////////////////
-
-
 function initMap() {
 
-    // Zoom map to fit Austria
-    map.fitBounds(radiation_generate.grid_extent);
+   // Get JSON list of places
+   radiation_generate.fetch_data(stations).then(function(response){
 
-    var items = {};
+      range = response.range;
+      data_age = response.age;
 
-    // Get JSON list of places
-    $.getJSON( "https://sfws.lfrz.at/json.php",{command: "getstations"}).done(function(data){
-      $.each( data, function( key, val ) {
-         items[key] = {
-               "name": val.n,
-               "x": val.x,
-               "y": val.y,
-               "lat":((lat_m*val.y)+lat_c),
-               "lng":((lng_m*val.x)+lng_c),
-               "val":0.0
-         };
-      });
-      console.log(items);
-      $.getJSON( "https://sfws.lfrz.at/json.php",{command: "getdata"}).done(function(data){
-         $.each( data.values, function( key, val ) {
-               items[key].val = val.v;
-               if(val.v > range_sv[1]){
-                  range_sv[1] = val.v;
-                  range_names[1] = items[key].name;
-               }
-               if(val.v < range_sv[0]){
-                  range_sv[0] = val.v;
-                  range_names[0] = items[key].name;
-               }
-               data_age = val.d; // save timestamp from data
-         });
-         build_heatmap(items);
-         render_map();
-         render_ui();
-         render_geolocation();
-      });     
+      build_heatmap(response.data);
+      render_map();
+      render_ui();
+      render_geolocation(); 
+
    });
 }
 
-function fetch_json() {
-
-}
-
-function build_heatmap(items){
+function build_heatmap(rawDataPoints){
 
    // Calculate isoband intervals
    var intervals = radiation_generate.createintervals(
-      Math.floor(range_sv[0]/increments)*increments,
-      Math.ceil(range_sv[1]/increments)*increments,
+      Math.floor(range.lower.val/increments)*increments,
+      Math.ceil(range.upper.val/increments)*increments,
       increments,
       unit
    );
-   
-   // Create an array of points from the heatmap data values (TODO : move this into $.getJSON above in future)
-   var rawDataArray = [];
-   $.each(items, function(k,v){
-      var loc = turf.point([v.lng, v.lat], {radiation: v.val, station_name: v.name});
-      rawDataArray.push(loc);
-   });
-
-   // Create featureCollection from data points
-   var rawDataPoints = turf.featureCollection(rawDataArray);
-
-   // Add "fake" duplicate points just outside the bounds to stretch coverage across whole of Austria
-   var rawDataFeatures = rawDataPoints.features;
-   rawDataFeatures.push(turf.point([15.451882,49.013285],{radiation: items["AT0716"].val})); // Waidhofen/Ybbs
-   rawDataFeatures.push(turf.point([14.887182,49.032998],{radiation: items["AT0514"].val})); // Gmünd/NÖ
-   rawDataFeatures.push(turf.point([14.549704,46.312700],{radiation: items["AT0305"].val})); // Bad Eisenkappel
-   rawDataFeatures.push(turf.point([9.442690,47.210770], {radiation: items["AT1906"].val}));  // Feldkirch
-   rawDataFeatures.push(turf.point([17.224055,48.144801],{radiation: items["AT0520"].val}));  // Hainburg
-   rawDataFeatures.push(turf.point([17.225467,47.799404],{radiation: items["AT0104"].val}));  // Frauenkirchen
-   rawDataPoints = turf.featureCollection(rawDataFeatures);
-
+ 
    // Generate isoband data
    var isodata = radiation_generate.points2isobands(rawDataPoints, intervals);
-
-   var grid = isodata.grid;
-   var croppedisobands = isodata.isobands;
-
-
-   // Rendering begins below...
-
-   // Set max/min values in text
-   $("#max_reading").text(range_sv[1]);
-   $("#min_reading").text(range_sv[0]);
-   $("#max_station").text(range_names[1]);
-   $("#min_station").text(range_names[0]);
-   $("#last_data").text(timeSince(data_age));
                      
    // Add map source ready for rendering
    map.addSource("austria-outline", {"type": "geojson","data": austria_poly});
-   map.addSource("stations", {"type": "geojson","data": rawDataPoints});
-   map.addSource("raw-data", {"type": "geojson","data": rawDataPoints}); 
-   map.addSource("isobands", {"type": "geojson","data": croppedisobands});
-   map.addSource("grid", {"type": "geojson","data": grid});
+   map.addSource("stations",        {"type": "geojson","data": rawDataPoints});
+   map.addSource("raw-data",        {"type": "geojson","data": rawDataPoints}); 
+   map.addSource("isobands",        {"type": "geojson","data": isodata.isobands});
+   map.addSource("grid",            {"type": "geojson","data": isodata.grid});
 }
 
 
 // Render all data to map
 function render_map(){
+   
+   // Zoom map to fit Austria
+   map.fitBounds(radiation_generate.grid_extent);
 
    // Add outline of Austria to map
    map.addLayer({
@@ -181,8 +120,8 @@ function render_map(){
             'circle-radius': {
                property: 'radiation',
                stops: [
-                  [{zoom: 8, value: range_sv[0]}, 20],
-                  [{zoom: 8, value: range_sv[1]}, 50]
+                  [{zoom: 8, value: range.lower.val}, 20],
+                  [{zoom: 8, value: range.upper.val}, 50]
                ]
             },
             "circle-color": {
@@ -273,6 +212,14 @@ function render_map(){
 }
 
 function render_ui(){
+
+   // Set max/min values in text
+   $("#max_reading").text(range.upper.val);
+   $("#min_reading").text(range.lower.val);
+   $("#max_station").text(range.upper.name);
+   $("#min_station").text(range.lower.name);
+   $("#last_data").text(timeSince(data_age));
+
    // Create toggle buttons for layers
    var toggle_layers = ['austria-outline', 'raw-data', 'grid', 'isobands', 'stations'];
 

@@ -35,6 +35,76 @@ function radiation_at(loc){
    return lvl;
 }
 
+function fetch_data(stations) {
+   return new Promise(function(resolve, reject){
+
+      var request = new XMLHttpRequest();
+      request.open('GET', "https://sfws.lfrz.at/json.php?command=getdata", true);
+
+      request.onload = function() {
+         if (request.status >= 200 && request.status < 400) {
+            // Success!
+
+            let range = {
+               lower: {
+                  val: 99999999999,
+                  name: ""
+               },
+               upper: {
+                  val :0,
+                  name: ""
+               }
+            };
+            let age = 0;
+            
+            var data = JSON.parse(request.responseText);
+            $.each( data.values, function( key, val ) {
+               // Save station values and min/max values
+               stations[key].val = val.v;
+               if(val.v > range.upper.val){
+                  range.upper.val = val.v;
+                  range.upper.name = stations[key].name;
+               }
+               if(val.v < range.lower.val){
+                  range.lower.val = val.v;
+                  range.lower.name = stations[key].name;
+               }
+               age = val.d; // save timestamp from data
+            });
+
+            // Create an array of points from the heatmap data values
+            var rawDataArray = [];
+            $.each(stations, function(k,v){
+               var loc = turf.point([v.lng, v.lat], {radiation: v.val, station_name: v.name});
+               rawDataArray.push(loc);
+            });
+            
+            var rawDataPoints = turf.featureCollection(rawDataArray);
+
+            // Add "fake" duplicate points just outside the bounds to stretch coverage across whole of Austria
+            var rawDataFeatures = rawDataPoints.features;
+            rawDataFeatures.push(turf.point([15.451882,49.013285],{radiation: stations["AT0716"].val})); // Waidhofen/Ybbs
+            rawDataFeatures.push(turf.point([14.887182,49.032998],{radiation: stations["AT0514"].val})); // Gmünd/NÖ
+            rawDataFeatures.push(turf.point([14.549704,46.312700],{radiation: stations["AT0305"].val})); // Bad Eisenkappel
+            rawDataFeatures.push(turf.point([9.442690,47.210770], {radiation: stations["AT1906"].val}));  // Feldkirch
+            rawDataFeatures.push(turf.point([17.224055,48.144801],{radiation: stations["AT0520"].val}));  // Hainburg
+            rawDataFeatures.push(turf.point([17.225467,47.799404],{radiation: stations["AT0104"].val}));  // Frauenkirchen
+            rawDataPoints = turf.featureCollection(rawDataFeatures);
+
+            resolve({
+               range: range,
+               data: rawDataPoints,
+               age: age
+            });
+         } else {
+            // We reached our target server, but it returned an error
+
+         }
+      };
+      request.send();
+   });
+  
+}
 
 
 /* Takes a turf object of rawDataPoints, each containing the data for an individual station
@@ -179,5 +249,6 @@ export{
    points2isobands,
    grid_extent,
    createintervals,
+   fetch_data,
    radiation_at
 };
