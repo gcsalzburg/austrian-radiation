@@ -30,7 +30,7 @@ The transformation process for the data is as follows:
    3. Interpolation (using @turf/interpolate)
 4. Expand grid to deal with points outside of Austrian bounds and provide smooth isobands in next step
 6. Calculate isobands using Marching Squares algorithm across structured grid
-7. Crop isobands to border of Austria
+7. Crop isobands to border of Austria (1km outline used, 250m outline was much too large a file)
 8. Display data
 
 ## Useful links ##
