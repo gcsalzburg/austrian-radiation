@@ -6,8 +6,8 @@ import stations from './stations.js';
 var mapbox_token = 'pk.eyJ1IjoiZ2NzYWx6YnVyZyIsImEiOiJjam1pNm5uZmcwMXNyM3FtNGp6dTY3MGxsIn0.PmLPkI3T8UxjEIPnz7fxEA';
 
 var increments = 5;                             // Number of sV in each isoband
-
 var unit = 'nSv/h';                             // unit of radiation values
+
 var pan_bounds = new mapboxgl.LngLatBounds(     // Pan boundary for map interaction
     [-18.166682, 28.605120],
     [40.239179, 61.138856]
@@ -25,7 +25,7 @@ var colour_scale = [                            // Gradient colour scale for rad
 let range;
 let data_age;
 
-var hover_isoband = null;
+let hover_isoband = null;
 
 // Mapbox access token   
 mapboxgl.accessToken = mapbox_token;
@@ -38,14 +38,15 @@ var map = new mapboxgl.Map({
     maxZoom: 12,
     maxBounds: pan_bounds
 });
+
+// Once map has loaded, let's go!
 map.on('load', function () {
-    initMap();
+   init_radiation();
 });
 
+//////////////////////////////////////////
 
-
-// ////////////////////////////////
-function initMap() {
+function init_radiation() {
 
    // Get JSON list of places
    radiation_generate.fetch_data(stations).then(function(response){
