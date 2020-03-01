@@ -46,6 +46,123 @@ map.on('load', function () {
 
 //////////////////////////////////////////
 
+var point_styles = ['circle', 'triangle', 'rect', 'star'];
+
+var dataset_template = {
+   fill: false,
+   pointRadius: 2,
+   pointBorderWidth: 0,
+   pointBackgroundColor: 'rgba(255,255,255,1)',
+   showLine: true,
+   borderColor: 'rgba(255,255,255,1)',
+   borderWidth: 2,
+   cubicInterpolationMode: 'monotone'
+};
+
+var config = {
+   type: 'scatter',
+   data: {
+      datasets: []
+   },
+   options: {
+      animation: {
+         duration: 0,
+      },
+      legend: {
+         display: false,
+      },
+      scales: {
+         yAxes: [{
+            display: false,
+            type: 'linear'
+         }],
+         xAxes: [{
+            display: false,
+            type: 'time',
+            time: {
+               unit: 'hour'
+            }
+         }],
+      },
+      tooltips: {
+         xPadding: 10,
+         yPadding: 10,
+         caretSize: 8,
+         displayColors: false,
+         mode: 'nearest',
+         intersect: false,
+         backgroundColor: 'rgb(56,239,40)',
+         bodyFontColor: '#000',
+         titleFontColor: '#000',
+         callbacks: {
+            label: function(tooltipItem, data) {
+                return "Max: " + tooltipItem.yLabel + "nSv";
+            },
+            afterBody: function(tooltipItem, data) {
+               // Add date in a second row of text
+               // For more rows, add more items to this array
+               return [tooltipItem[0].xLabel];
+           }
+        }
+      }
+   }
+};
+
+// Begin timeline rendering at bottom
+let chart;
+init_chart();
+
+function init_chart() {
+   // Create graph with appropriate formatting
+   var ctx = document.getElementById('timeline_chart').getContext('2d');
+
+   // Initiate chart
+   chart = new Chart(ctx, config);
+   
+   fetch_graph();
+}
+
+function fetch_graph() {
+   var request = new XMLHttpRequest();
+   request.open('GET', "https://mqtt.designedbycave.co.uk/radiation/dates", true);
+
+   request.onload = function() {
+      if (request.status >= 200 && request.status < 400) {
+         // Success!
+
+         var measurement_data = JSON.parse(request.responseText);
+
+         // Clear existing data
+         chart.data.datasets = [];
+                  
+         // Create map function to get x,y values from measurement_ts and measurement_max
+         var points = measurement_data.data.map(function(e) {
+            return {
+            //  x: convertDateToUTC(new Date(e.ts*1000)),
+               x: new Date(e.measurement_ts*1000),
+               y: e.measurement_max
+            };
+         });
+
+         // Cheeky copy of object the budget way https://stackoverflow.com/a/10869248/10240581
+         var new_dataset = JSON.parse(JSON.stringify(dataset_template));
+         new_dataset.pointStyle  = point_styles[0];   // Add new properties
+         new_dataset.data        = points;
+         chart.data.datasets.push(new_dataset);       // Add data to graph
+
+         // Update graph with data
+         chart.update();
+      
+      } else {
+         // We reached our target server, but it returned an error
+
+      }
+   };
+   request.send();
+}
+
+//////////////////////////////////////////
+
 function init_radiation() {
 
    // Get JSON list of places

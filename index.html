@@ -7,6 +7,8 @@
 <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
 <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.js'></script>
 <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.css' rel='stylesheet' />
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.bundle.min.js"></script>
 <script src='js/turf.min.js'></script>
 <script src='js/martinez.umd.js'></script>
 
@@ -51,6 +53,9 @@
             </ul>
         </div>
     </section>
+    <section class="timeline_area">
+      <canvas id="timeline_chart" class="timeline_chart" height="120"></canvas>
+   </div>
 
 
     <svg width="0" height="0" style="display:block" preserveAspectRatio="none" viewBox="0 0 100 100">
