@@ -1,7 +1,7 @@
 # Austrian Radiation #
 
 > View the map live here!
-> https://www.designedbycave.co.uk/austrian-radiation/
+> https://play.interactionmagic.com/austrian-radiation/
 
 
 ![Screenshot of page](https://www.designedbycave.co.uk/austrian-radiation/img/screenshot.png)
